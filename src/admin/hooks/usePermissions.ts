@@ -1,17 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../services/supabase/supabase-client';
-
-// Define permission types
-export type Permission = 
-  | 'view_dashboard'
-  | 'view_users'
-  | 'manage_users'
-  | 'manage_roles'
-  | 'manage_settings'
-  | 'view_audit_logs'
-  | 'manage_files'
-  | 'view_analytics';
+import type { Permission } from '../types/permissions';
 
 // Define role types
 export type Role = 'admin' | 'manager' | 'user';
@@ -21,21 +11,50 @@ const rolePermissions: Record<Role, Permission[]> = {
   admin: [
     'view_dashboard',
     'view_users',
+    'create_users',
+    'edit_users',
+    'delete_users',
+    'suspend_users',
     'manage_users',
+    'view_roles',
+    'create_roles',
+    'edit_roles',
+    'delete_roles',
     'manage_roles',
-    'manage_settings',
-    'view_audit_logs',
+    'view_all_files',
+    'download_all_files',
+    'restore_deleted_files',
+    'delete_all_files',
+    'upload_as_user',
+    'create_folder_as_user',
     'manage_files',
-    'view_analytics'
+    'view_audit_logs',
+    'export_audit_logs',
+    'view_analytics',
+    'export_analytics',
+    'manage_settings',
+    'view_settings',
+    'edit_settings'
   ],
   manager: [
     'view_dashboard',
     'view_users',
-    'manage_files',
+    'view_roles',
+    'view_all_files',
+    'download_all_files',
+    'upload_as_user',
+    'create_folder_as_user',
+    'view_audit_logs',
     'view_analytics',
-    'view_audit_logs'
+    'view_settings'
   ],
-  user: []
+  user: [
+    'view_dashboard',
+    'view_all_files',
+    'download_all_files',
+    'upload_as_user',
+    'create_folder_as_user'
+  ]
 };
 
 export const usePermissions = () => {

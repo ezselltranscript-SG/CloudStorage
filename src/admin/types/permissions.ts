@@ -1,33 +1,42 @@
 // Define los tipos de permisos disponibles en el sistema
 export type Permission = 
-  // Permisos de usuario
+  // Dashboard
+  | 'view_dashboard'
+  
+  // User permissions
   | 'view_users'
   | 'create_users'
   | 'edit_users'
   | 'delete_users'
   | 'suspend_users'
+  | 'manage_users'
   
-  // Permisos de roles
+  // Role permissions
   | 'view_roles'
   | 'create_roles'
   | 'edit_roles'
   | 'delete_roles'
+  | 'manage_roles'
   
-  // Permisos de archivos
+  // File permissions
   | 'view_all_files'
   | 'download_all_files'
   | 'restore_deleted_files'
   | 'delete_all_files'
   | 'upload_as_user'
   | 'create_folder_as_user'
+  | 'manage_files'
   
-  // Permisos de auditoría
+  // Audit logs
   | 'view_audit_logs'
   | 'export_audit_logs'
   
-  // Permisos de analíticas
+  // Analytics
   | 'view_analytics'
   | 'export_analytics'
+  
+  // Settings
+  | 'manage_settings'
   
   // Permisos de configuración
   | 'view_settings'
