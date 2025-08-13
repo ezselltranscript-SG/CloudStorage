@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../hooks';
 
 // Importamos el tipo Permission
-import type { Permission } from '../hooks/usePermissions';
+import type { Permission } from '../types/permissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

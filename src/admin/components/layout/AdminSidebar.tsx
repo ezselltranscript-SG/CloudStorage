@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils/cn';
 import { useAdminAuth } from '../../context/AdminAuthContext';
-import type { Permission } from '../../hooks/usePermissions';
+import type { Permission } from '../../types/permissions';
 
 interface AdminSidebarProps {
   isOpen: boolean;

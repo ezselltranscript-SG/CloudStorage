@@ -6,7 +6,7 @@ import { AdminTopbar } from '../layout';
 // Use relative path with explicit file extension
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { Navigate } from 'react-router-dom';
-import type { Permission } from '../../hooks/usePermissions';
+import type { Permission } from '../../types/permissions';
 
 interface AdminLayoutProps {
   children: ReactNode;

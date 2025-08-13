@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { usePermissions, type Permission } from '../hooks/usePermissions';
+import { usePermissions } from '../hooks/usePermissions';
+import type { Permission } from '../types/permissions';
 import type { AdminUser } from '../types/auth';
 
 interface AdminAuthContextType {

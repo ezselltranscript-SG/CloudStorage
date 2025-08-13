@@ -3,7 +3,8 @@ import { Check, X, AlertCircle } from 'lucide-react';
 import { StateDisplay } from '../common/StateDisplay';
 import { AdminTooltip } from '../common/AdminTooltip';
 import { useAdminToast } from '../../context/AdminToastContext';
-import type { Role, Permission } from '../../hooks/usePermissions';
+import type { Role } from '../../hooks/usePermissions';
+import type { Permission } from '../../types/permissions';
 
 interface PermissionGroup {
   name: string;

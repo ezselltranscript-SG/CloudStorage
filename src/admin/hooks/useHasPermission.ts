@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { usePermissions, type Permission } from './usePermissions';
+import { usePermissions } from './usePermissions';
+import type { Permission } from '../types/permissions';
 
 /**
  * Hook that provides a function to check if the current user has a specific permission
