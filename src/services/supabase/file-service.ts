@@ -1,0 +1,178 @@
+import { supabase, STORAGE_BUCKET } from './supabase-client';
+import type { Database } from '../../types/supabase';
+// Eliminamos la importación no utilizada
+
+export type File = Database['public']['Tables']['files']['Row'];
+export type FileInsert = Database['public']['Tables']['files']['Insert'];
+export type FileUpdate = Database['public']['Tables']['files']['Update'];
+
+/**
+ * Servicio para manejar las operaciones CRUD de archivos
+ */
+export const fileService = {
+  /**
+   * Obtiene todos los archivos de una carpeta para el usuario actual
+   * @param folderId - ID de la carpeta
+   * @param userId - ID del usuario autenticado
+   */
+  async getFilesByFolderId(folderId: string, userId?: string) {
+    let query = supabase
+      .from('files')
+      .select('*')
+      .eq('folder_id', folderId)
+      .order('filename');
+    
+    // Si se proporciona un userId, filtrar por ese usuario
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Obtiene un archivo por su ID para el usuario actual
+   * @param id - ID del archivo
+   * @param userId - ID del usuario autenticado
+   */
+  async getFileById(id: string, userId?: string) {
+    let query = supabase
+      .from('files')
+      .select('*')
+      .eq('id', id);
+    
+    // Si se proporciona un userId, filtrar por ese usuario
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Sube un archivo a Supabase Storage y crea un registro en la base de datos
+   * @param file - Metadatos del archivo a subir
+   * @param fileData - Contenido del archivo a subir (Blob)
+   * @param userId - ID del usuario autenticado
+   */
+  async uploadFile(file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string }, fileData: Blob, userId?: string) {
+    // 1. Subir el archivo al Storage
+    const fileExt = file.filename.split('.').pop();
+    const filePath = `${file.folder_id}/${file.id}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, fileData);
+    
+    if (uploadError) throw uploadError;
+
+    // 2. Crear el registro en la base de datos
+    const fileRecord: FileInsert = {
+      id: file.id,
+      filename: file.filename,
+      folder_id: file.folder_id,
+      storage_path: filePath,
+      user_id: userId
+    };
+
+    const { data, error } = await supabase
+      .from('files')
+      .insert(fileRecord)
+      .select()
+      .single();
+    
+    if (error) {
+      // Si hay error en la BD, eliminar el archivo del storage para mantener consistencia
+      await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
+      throw error;
+    }
+    
+    return data;
+  },
+
+  /**
+   * Actualiza un archivo existente del usuario actual
+   * @param id - ID del archivo a actualizar
+   * @param file - Datos actualizados del archivo
+   * @param userId - ID del usuario autenticado
+   */
+  async updateFile(id: string, file: FileUpdate, userId?: string) {
+    let query = supabase
+      .from('files')
+      .update(file)
+      .eq('id', id);
+    
+    // Si se proporciona un userId, filtrar por ese usuario
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.select().single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Elimina un archivo por su ID del usuario actual
+   * @param id - ID del archivo a eliminar
+   * @param userId - ID del usuario autenticado
+   */
+  async deleteFile(id: string, userId?: string) {
+    // 1. Obtener la información del archivo para conocer la ruta de storage
+    let query = supabase
+      .from('files')
+      .select('storage_path')
+      .eq('id', id);
+    
+    // Si se proporciona un userId, filtrar por ese usuario
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data: fileData, error: fetchError } = await query.single();
+    
+    if (fetchError) throw fetchError;
+    
+    // 2. Eliminar el archivo del storage
+    const { error: storageError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([fileData.storage_path]);
+    
+    if (storageError) throw storageError;
+    
+    // 3. Eliminar el registro de la base de datos
+    let deleteQuery = supabase
+      .from('files')
+      .delete()
+      .eq('id', id);
+    
+    // Si se proporciona un userId, filtrar por ese usuario
+    if (userId) {
+      deleteQuery = deleteQuery.eq('user_id', userId);
+    }
+    
+    const { error } = await deleteQuery;
+    
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Obtiene la URL pública de un archivo
+   * @param storagePath - Ruta del archivo en el storage
+   */
+  getPublicUrl(storagePath: string) {
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(storagePath);
+    
+    return data.publicUrl;
+  }
+};

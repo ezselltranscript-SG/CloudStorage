@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asignar Rol de Administrador</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2563eb;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d1fae5;
+      border: 1px solid #10b981;
+      color: #047857;
+    }
+    .error {
+      background-color: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #b91c1c;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .hidden {
+      display: none;
+    }
+    .steps {
+      margin-top: 20px;
+    }
+    .step {
+      margin-bottom: 10px;
+      padding-left: 20px;
+      position: relative;
+    }
+    .step:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Asignar Rol de Administrador</h1>
+    <p>Esta herramienta te ayudará a configurar tu cuenta como administrador para acceder al panel de administración.</p>
+    
+    <div class="steps">
+      <h3>Pasos:</h3>
+      <div class="step">Primero, asegúrate de haber iniciado sesión en la aplicación.</div>
+      <div class="step">Haz clic en el botón "Crear tabla user_roles" para crear la tabla necesaria en Supabase.</div>
+      <div class="step">Luego, haz clic en "Asignar rol de administrador" para asignar el rol a tu cuenta.</div>
+      <div class="step">Una vez completado, podrás acceder al panel de administración en <a href="/admin" target="_blank">/admin</a>.</div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <button id="createTableBtn">Crear tabla user_roles</button>
+      <button id="assignAdminBtn" style="margin-left: 10px;">Asignar rol de administrador</button>
+    </div>
+    
+    <div id="result" class="result hidden"></div>
+  </div>
+
+  <script>
+    // Inicializar cliente de Supabase
+    let supabase;
+    
+    async function initSupabase() {
+      // Obtener las variables de entorno desde el servidor
+      const response = await fetch('/api/config');
+      const config = await response.json();
+      
+      supabase = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+      return supabase;
+    }
+    
+    // Función para crear la tabla user_roles
+    async function createUserRolesTable() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = 'Creando tabla user_roles...';
+      resultDiv.classList.remove('hidden');
+      
+      try {
+        // Verificar si el usuario está autenticado
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          throw new Error('No has iniciado sesión. Por favor, inicia sesión primero.');
+        }
+        
+        // Ejecutar SQL para crear la tabla
+        const sql = `
+          -- Crear tabla user_roles si no existe
+          CREATE TABLE IF NOT EXISTS user_roles (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL CHECK (role IN ('admin', 'manager', 'user')),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            UNIQUE(user_id)
+          );
+          
+          -- Crear política RLS para la tabla user_roles
+          ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+          
+          -- Política para permitir a los usuarios ver su propio rol
+          CREATE POLICY "Users can view their own role" ON user_roles
+            FOR SELECT
+            USING (auth.uid() = user_id);
+          
+          -- Política para permitir a los administradores gestionar todos los roles
+          CREATE POLICY "Admins can manage all roles" ON user_roles
+            USING (
+              EXISTS (
+                SELECT 1 FROM user_roles
+                WHERE user_id = auth.uid() AND role = 'admin'
+              )
+            );
+        `;
+        
+        const { error: sqlError } = await supabase.rpc('exec_sql', { sql });
+        
+        if (sqlError) {
+          // Si el error es porque no tienes permisos para ejecutar SQL
+          if (sqlError.message.includes('permission denied')) {
+            resultDiv.innerHTML = `
+              <p>No tienes permisos para ejecutar SQL directamente. Deberás crear la tabla manualmente desde el panel de Supabase:</p>
+              <ol>
+                <li>Ve al panel de Supabase</li>
+                <li>Navega a SQL Editor</li>
+                <li>Crea un nuevo query</li>
+                <li>Pega el siguiente SQL y ejecútalo:</li>
+              </ol>
+              <pre>${sql}</pre>
+              <p>Una vez creada la tabla, vuelve aquí y haz clic en "Asignar rol de administrador".</p>
+            `;
+            resultDiv.className = 'result';
+            return;
+          }
+          throw sqlError;
+        }
+        
+        resultDiv.innerHTML = 'Tabla user_roles creada correctamente.';
+        resultDiv.className = 'result success';
+      } catch (error) {
+        console.error('Error:', error);
+        resultDiv.innerHTML = `Error: ${error.message || 'Ocurrió un error desconocido'}`;
+        resultDiv.className = 'result error';
+      }
+    }
+    
+    // Función para asignar rol de administrador
+    async function assignAdminRole() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = 'result';
+      resultDiv.innerHTML = 'Asignando rol de administrador...';
+      resultDiv.classList.remove('hidden');
+      
+      try {
+        // Verificar si el usuario está autenticado
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          throw new Error('No has iniciado sesión. Por favor, inicia sesión primero.');
+        }
+        
+        console.log(`Usuario encontrado: ${user.email} (ID: ${user.id})`);
+        
+        // Verificar si la tabla user_roles existe
+        const { error: tableCheckError } = await supabase
+          .from('user_roles')
+          .select('count(*)', { count: 'exact', head: true });
+        
+        if (tableCheckError) {
+          if (tableCheckError.message.includes('relation "user_roles" does not exist')) {
+            throw new Error('La tabla user_roles no existe. Por favor, crea la tabla primero.');
+          }
+          throw tableCheckError;
+        }
+        
+        // Verificar si ya tiene un rol asignado
+        const { data: existingRole, error: roleCheckError } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (roleCheckError && roleCheckError.code !== 'PGRST116') { // PGRST116 es "no se encontraron resultados"
+          throw roleCheckError;
+        }
+        
+        // Insertar o actualizar el rol
+        if (existingRole) {
+          console.log(`El usuario ya tiene el rol: ${existingRole.role}`);
+          
+          if (existingRole.role === 'admin') {
+            resultDiv.innerHTML = 'El usuario ya es administrador. No se requieren cambios.';
+            resultDiv.className = 'result success';
+            return;
+          }
+          
+          // Actualizar el rol a admin
+          const { error: updateError } = await supabase
+            .from('user_roles')
+            .update({ role: 'admin' })
+            .eq('user_id', user.id);
+          
+          if (updateError) {
+            throw updateError;
+          }
+          
+          resultDiv.innerHTML = `Rol actualizado a 'admin' para el usuario ${user.email}. Ahora puedes acceder al <a href="/admin" target="_blank">panel de administración</a>.`;
+        } else {
+          // Insertar nuevo rol
+          const { error: insertError } = await supabase
+            .from('user_roles')
+            .insert({ user_id: user.id, role: 'admin' });
+          
+          if (insertError) {
+            throw insertError;
+          }
+          
+          resultDiv.innerHTML = `Rol 'admin' asignado al usuario ${user.email}. Ahora puedes acceder al <a href="/admin" target="_blank">panel de administración</a>.`;
+        }
+        
+        resultDiv.className = 'result success';
+      } catch (error) {
+        console.error('Error:', error);
+        resultDiv.innerHTML = `Error: ${error.message || 'Ocurrió un error desconocido'}`;
+        resultDiv.className = 'result error';
+      }
+    }
+    
+    // Inicializar cuando el documento esté listo
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await initSupabase();
+        
+        document.getElementById('createTableBtn').addEventListener('click', createUserRolesTable);
+        document.getElementById('assignAdminBtn').addEventListener('click', assignAdminRole);
+      } catch (error) {
+        console.error('Error al inicializar:', error);
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `Error al inicializar: ${error.message || 'Ocurrió un error desconocido'}`;
+        resultDiv.className = 'result error';
+        resultDiv.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
