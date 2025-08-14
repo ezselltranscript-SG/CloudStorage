@@ -18,6 +18,7 @@ export const folderService = {
     let query = supabase
       .from('folders')
       .select('*')
+      .is('deleted_at', null) // Solo carpetas activas
       .order('created_at', { ascending: false });
     
     // Si se proporciona un userId, filtrar por ese usuario
@@ -40,6 +41,7 @@ export const folderService = {
     let query = supabase
       .from('folders')
       .select('*')
+      .is('deleted_at', null) // Solo carpetas activas
       .order('name');
     
     // Manejar el caso de parent_id nulo de manera especial
@@ -69,7 +71,8 @@ export const folderService = {
     let query = supabase
       .from('folders')
       .select('*')
-      .eq('id', id);
+      .eq('id', id)
+      .is('deleted_at', null); // Solo carpetas activas
     
     // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {
@@ -163,24 +166,120 @@ export const folderService = {
   },
 
   /**
-   * Elimina una carpeta por su ID del usuario actual
-   * @param id - ID de la carpeta a eliminar
+   * Mueve una carpeta a la papelera (soft delete)
+   * @param id - ID de la carpeta a mover a papelera
    * @param userId - ID del usuario autenticado
    */
-  async deleteFolder(id: string, userId?: string) {
+  async moveToTrash(id: string, userId?: string) {
+    // Primero obtenemos la carpeta para guardar su parent_id original
+    const folder = await this.getFolderById(id, userId);
+    if (!folder) throw new Error('Folder not found');
+    
+    let query = supabase
+      .from('folders')
+      .update({ 
+        deleted_at: new Date().toISOString(),
+        original_parent_id: folder.parent_id
+      })
+      .eq('id', id)
+      .is('deleted_at', null); // Solo si no está ya eliminado
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.select().maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Restaura una carpeta desde la papelera
+   * @param id - ID de la carpeta a restaurar
+   * @param userId - ID del usuario autenticado
+   */
+  async restoreFromTrash(id: string, userId?: string) {
+    // Obtener la carpeta eliminada para restaurar su parent_id original
+    let getQuery = supabase
+      .from('folders')
+      .select('original_parent_id')
+      .eq('id', id)
+      .not('deleted_at', 'is', null);
+    
+    if (userId) {
+      getQuery = getQuery.eq('user_id', userId);
+    }
+    
+    const { data: folderData, error: getError } = await getQuery.maybeSingle();
+    if (getError) throw getError;
+    if (!folderData) throw new Error('Folder not found in trash');
+    
+    let query = supabase
+      .from('folders')
+      .update({ 
+        deleted_at: null,
+        parent_id: folderData.original_parent_id,
+        original_parent_id: null
+      })
+      .eq('id', id)
+      .not('deleted_at', 'is', null); // Solo si está eliminado
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.select().maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Obtiene carpetas en la papelera del usuario
+   * @param userId - ID del usuario autenticado
+   */
+  async getTrashFolders(userId?: string) {
+    let query = supabase
+      .from('folders')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Elimina permanentemente una carpeta (hard delete)
+   * @param id - ID de la carpeta a eliminar permanentemente
+   * @param userId - ID del usuario autenticado
+   */
+  async permanentDelete(id: string, userId?: string) {
     let query = supabase
       .from('folders')
       .delete()
       .eq('id', id);
     
-    // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {
       query = query.eq('user_id', userId);
     }
     
     const { error } = await query;
-    
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Elimina una carpeta (backward compatibility - ahora usa soft delete)
+   * @param id - ID de la carpeta a eliminar
+   * @param userId - ID del usuario autenticado
+   */
+  async deleteFolder(id: string, userId?: string) {
+    // Por compatibilidad, ahora hace soft delete
+    return this.moveToTrash(id, userId);
   }
 };

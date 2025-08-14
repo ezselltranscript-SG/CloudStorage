@@ -20,6 +20,7 @@ export const fileService = {
       .from('files')
       .select('*')
       .eq('folder_id', folderId)
+      .is('deleted_at', null) // Solo archivos activos
       .order('id');
     
     // Si se proporciona un userId, filtrar por ese usuario
@@ -42,7 +43,8 @@ export const fileService = {
     let query = supabase
       .from('files')
       .select('*')
-      .eq('id', id);
+      .eq('id', id)
+      .is('deleted_at', null); // Solo archivos activos
     
     // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {
@@ -134,18 +136,79 @@ export const fileService = {
   },
 
   /**
-   * Elimina un archivo por su ID del usuario actual
-   * @param id - ID del archivo a eliminar
+   * Mueve un archivo a la papelera (soft delete)
+   * @param id - ID del archivo a mover a papelera
    * @param userId - ID del usuario autenticado
    */
-  async deleteFile(id: string, userId?: string) {
+  async moveToTrash(id: string, userId?: string) {
+    let query = supabase
+      .from('files')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('deleted_at', null); // Solo si no está ya eliminado
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.select().maybeSingle();
+    if (error) throw error;
+    return data ? { ...data, filename: (data as any).name } : data;
+  },
+
+  /**
+   * Restaura un archivo desde la papelera
+   * @param id - ID del archivo a restaurar
+   * @param userId - ID del usuario autenticado
+   */
+  async restoreFromTrash(id: string, userId?: string) {
+    let query = supabase
+      .from('files')
+      .update({ deleted_at: null })
+      .eq('id', id)
+      .not('deleted_at', 'is', null); // Solo si está eliminado
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.select().maybeSingle();
+    if (error) throw error;
+    return data ? { ...data, filename: (data as any).name } : data;
+  },
+
+  /**
+   * Obtiene archivos en la papelera del usuario
+   * @param userId - ID del usuario autenticado
+   */
+  async getTrashFiles(userId?: string) {
+    let query = supabase
+      .from('files')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map((row: any) => ({ ...row, filename: row.name }));
+  },
+
+  /**
+   * Elimina permanentemente un archivo (hard delete)
+   * @param id - ID del archivo a eliminar permanentemente
+   * @param userId - ID del usuario autenticado
+   */
+  async permanentDelete(id: string, userId?: string) {
     // 1. Obtener la información del archivo para conocer la ruta de storage
     let query = supabase
       .from('files')
       .select('storage_path')
       .eq('id', id);
     
-    // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {
       query = query.eq('user_id', userId);
     }
@@ -170,15 +233,23 @@ export const fileService = {
       .delete()
       .eq('id', id);
     
-    // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {
       deleteQuery = deleteQuery.eq('user_id', userId);
     }
     
     const { error } = await deleteQuery;
-    
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Elimina un archivo (backward compatibility - ahora usa soft delete)
+   * @param id - ID del archivo a eliminar
+   * @param userId - ID del usuario autenticado
+   */
+  async deleteFile(id: string, userId?: string) {
+    // Por compatibilidad, ahora hace soft delete
+    return this.moveToTrash(id, userId);
   },
 
   /**
