@@ -32,6 +32,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   // Estados para búsqueda y filtrado
   const [searchQuery, setSearchQuery] = useState('');
   
+  
   // Estados para drag & drop
   const [isDragging, setIsDragging] = useState(false);
   const handleDragEnter = () => setIsDragging(true);
@@ -64,7 +65,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     data: files, 
     isLoading: filesLoading, 
     error: filesError 
-  } = useFilesByFolderId(currentFolderId);
+  } = useFilesByFolderId(currentFolderId || undefined);
   
   const { 
     data: currentFolder 
@@ -273,6 +274,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               />
             </div>
             
+
             {/* Action buttons */}
             <Button
               onClick={() => setIsNewFolderModalOpen(true)}

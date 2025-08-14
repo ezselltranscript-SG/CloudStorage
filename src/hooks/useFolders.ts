@@ -5,28 +5,26 @@ import { useAuth } from '../contexts/AuthContext';
 
 /**
  * Hook para obtener todas las carpetas del usuario actual
+ * @param includeShared - Si incluir carpetas compartidas por otros usuarios
  */
 export const useAllFolders = () => {
-  const { user } = useAuth();
-  
   return useQuery({
-    queryKey: ['folders', user?.id],
-    queryFn: () => folderService.getAllFolders(user?.id),
-    enabled: !!user, // Solo ejecutar si hay un usuario autenticado
+    queryKey: ['folders'],
+    queryFn: () => folderService.getAllFolders(),
+    staleTime: 30000, // 30 segundos
   });
 };
 
 /**
  * Hook para obtener las carpetas por ID de carpeta padre del usuario actual
  * @param parentId - ID de la carpeta padre (null para carpetas raíz)
+ * @param includeShared - Si incluir carpetas compartidas por otros usuarios
  */
 export const useFoldersByParentId = (parentId: string | null) => {
-  const { user } = useAuth();
-  
   return useQuery({
-    queryKey: ['folders', 'parent', parentId, user?.id],
-    queryFn: () => folderService.getFoldersByParentId(parentId, user?.id),
-    enabled: !!user, // Solo ejecutar si hay un usuario autenticado
+    queryKey: ['folders', 'parent', parentId],
+    queryFn: () => folderService.getFoldersByParentId(parentId),
+    staleTime: 30000, // 30 segundos
   });
 };
 
@@ -104,6 +102,29 @@ export const useDeleteFolder = () => {
       // También invalidar la consulta de trash para que aparezca allí
       queryClient.invalidateQueries({ 
         queryKey: ['trash', 'folders', user?.id] 
+      });
+    },
+  });
+};
+
+/**
+ * Hook para cambiar el estado de compartición de una carpeta
+ */
+export const useToggleFolderSharing = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: ({ folderId, isShared }: { folderId: string; isShared: boolean }) => 
+      folderService.toggleFolderSharing(folderId, isShared, user?.id!),
+    onSuccess: (updatedFolder) => {
+      // Invalidar consultas para actualizar la UI
+      queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['folders', 'parent', updatedFolder?.parent_id, user?.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['folders', updatedFolder?.id, user?.id] 
       });
     },
   });

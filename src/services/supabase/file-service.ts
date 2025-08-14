@@ -14,21 +14,16 @@ export const fileService = {
    * Obtiene todos los archivos de una carpeta para el usuario actual
    * @param folderId - ID de la carpeta
    * @param userId - ID del usuario autenticado
+   * @param includeShared - Si incluir archivos compartidos por otros usuarios
    */
-  async getFilesByFolderId(folderId: string, userId?: string) {
-    let query = supabase
+  async getFilesByFolderId(folderId: string) {
+    const { data, error } = await supabase
       .from('files')
       .select('*')
       .eq('folder_id', folderId)
       .is('deleted_at', null) // Solo archivos activos
       .order('id');
     
-    // Si se proporciona un userId, filtrar por ese usuario
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-    
-    const { data, error } = await query;
     if (error) throw error;
     // Adapt DB -> UI: exponer filename derivado de name
     return (data ?? []).map((row: any) => ({ ...row, filename: row.name }));
@@ -62,7 +57,7 @@ export const fileService = {
    * @param fileData - Contenido del archivo a subir (Blob)
    * @param userId - ID del usuario autenticado
    */
-  async uploadFile(file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string }, fileData: Blob, userId?: string) {
+  async uploadFile(file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string; is_shared?: boolean }, fileBlob: Blob, userId?: string) {
     // 1. Subir el archivo al Storage
     if (!userId) {
       throw new Error('Missing userId for upload');
@@ -73,25 +68,24 @@ export const fileService = {
     
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(filePath, fileData);
+      .upload(filePath, fileBlob);
     
     if (uploadError) throw uploadError;
 
     // 2. Crear el registro en la base de datos
-    const fileRecord: FileInsert = {
-      id: file.id,
-      // Mapear UI filename -> DB name
+    const fileData: FileInsert = {
       name: file.filename,
-      size: (fileData as any)?.size ?? undefined,
-      type: (fileData as any)?.type || 'application/octet-stream',
       folder_id: file.folder_id,
       storage_path: filePath,
-      user_id: userId as string
+      size: (fileBlob as any)?.size ?? undefined,
+      mimetype: (fileBlob as any)?.type || 'application/octet-stream',
+      user_id: userId as string,
+      is_shared: true // Default to shared for organization-wide access
     } as unknown as FileInsert;
 
     const { data, error } = await supabase
       .from('files')
-      .insert(fileRecord)
+      .insert(fileData)
       .select()
       .maybeSingle();
     
@@ -255,5 +249,24 @@ export const fileService = {
       .getPublicUrl(storagePath);
     
     return data.publicUrl;
+  },
+
+  /**
+   * Cambia el estado de compartición de un archivo
+   * @param fileId - ID del archivo
+   * @param isShared - Nuevo estado de compartición
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async toggleFileSharing(fileId: string, isShared: boolean, userId: string) {
+    const { data, error } = await supabase
+      .from('files')
+      .update({ is_shared: isShared })
+      .eq('id', fileId)
+      .eq('user_id', userId) // Solo el owner puede cambiar el estado
+      .select()
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data ? { ...data, filename: (data as any).name } : data;
   }
 };

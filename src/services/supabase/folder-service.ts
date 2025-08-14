@@ -13,53 +13,35 @@ export const folderService = {
   /**
    * Obtiene todas las carpetas del usuario actual
    * @param userId - ID del usuario autenticado
+   * @param includeShared - Si incluir carpetas compartidas por otros usuarios
    */
-  async getAllFolders(userId?: string) {
-    let query = supabase
+  async getAllFolders() {
+    const { data, error } = await supabase
       .from('folders')
       .select('*')
       .is('deleted_at', null) // Solo carpetas activas
       .order('created_at', { ascending: false });
     
-    // Si se proporciona un userId, filtrar por ese usuario
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-    
-    const { data, error } = await query;
-    
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   /**
    * Obtiene las carpetas hijas de una carpeta padre para el usuario actual
    * @param parentId - ID de la carpeta padre (null para carpetas raíz)
    * @param userId - ID del usuario autenticado
+   * @param includeShared - Si incluir carpetas compartidas por otros usuarios
    */
-  async getFoldersByParentId(parentId: string | null, userId?: string) {
-    let query = supabase
+  async getFoldersByParentId(parentId: string | null) {
+    const { data, error } = await supabase
       .from('folders')
       .select('*')
+      .eq('parent_id', parentId)
       .is('deleted_at', null) // Solo carpetas activas
-      .order('name');
-    
-    // Manejar el caso de parent_id nulo de manera especial
-    if (parentId === null) {
-      query = query.is('parent_id', null);
-    } else {
-      query = query.eq('parent_id', parentId);
-    }
-    
-    // Si se proporciona un userId, filtrar por ese usuario
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-    
-    const { data, error } = await query;
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   /**
@@ -111,16 +93,16 @@ export const folderService = {
     let nameToTry = baseName;
 
     while (attempt < 20) {
-      const payload: FolderInsert = {
-        ...folder,
-        user_id: userId,
+      const folderData: FolderInsert = {
         name: nameToTry,
         parent_id: normalizedParentId,
-      } as FolderInsert;
+        user_id: userId,
+        is_shared: true, // Default to shared for organization-wide access
+      };
 
       const { data, error } = await supabase
         .from('folders')
-        .insert(payload)
+        .insert(folderData)
         .select()
         .maybeSingle();
 
@@ -253,6 +235,7 @@ export const folderService = {
     return data;
   },
 
+
   /**
    * Elimina permanentemente una carpeta (hard delete)
    * @param id - ID de la carpeta a eliminar permanentemente
@@ -281,5 +264,24 @@ export const folderService = {
   async deleteFolder(id: string, userId?: string) {
     // Por compatibilidad, ahora hace soft delete
     return this.moveToTrash(id, userId);
+  },
+
+  /**
+   * Cambia el estado de compartición de una carpeta
+   * @param folderId - ID de la carpeta
+   * @param isShared - Nuevo estado de compartición
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async toggleFolderSharing(folderId: string, isShared: boolean, userId: string) {
+    const { data, error } = await supabase
+      .from('folders')
+      .update({ is_shared: isShared })
+      .eq('id', folderId)
+      .eq('user_id', userId) // Solo el owner puede cambiar el estado
+      .select()
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
   }
 };

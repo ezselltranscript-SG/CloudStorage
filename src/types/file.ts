@@ -11,6 +11,8 @@ export interface File {
   mimetype: string;
   created_at: string;
   updated_at: string;
+  user_id: string;
+  is_shared: boolean;
 }
 
 export interface FileInsert {
@@ -20,6 +22,8 @@ export interface FileInsert {
   storage_path?: string;
   size?: number;
   mimetype?: string;
+  user_id?: string;
+  is_shared?: boolean;
 }
 
 export interface FileUpdate {
@@ -28,6 +32,7 @@ export interface FileUpdate {
   storage_path?: string;
   size?: number;
   mimetype?: string;
+  is_shared?: boolean;
 }
 
 import { FileText, Image, FileArchive, FileCode, Music, Video, File } from 'lucide-react';

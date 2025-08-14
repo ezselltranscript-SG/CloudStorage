@@ -3,6 +3,8 @@ import { Folder, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { Folder as FolderType } from '../../services/supabase/folder-service';
 import { cn } from '../../lib/utils/cn';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { ShareToggleButton } from './ShareToggleButton';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface FolderItemProps {
   folder: FolderType;
@@ -21,6 +23,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   
   // We fix the type error using a type assertion for the ref
   useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setMenuOpen(false));
@@ -39,7 +42,14 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           <Folder className="h-4 w-4 text-blue-500" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium text-slate-800 truncate">{folder.name}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-slate-800 truncate">{folder.name}</div>
+            {folder.is_shared && folder.user_id !== user?.id && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                Shared
+              </span>
+            )}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">Folder</div>
         </div>
       </div>
@@ -50,7 +60,18 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       {/* Type (always Folder) */}
       <div className="col-span-2 text-xs text-slate-500">-</div>
       {/* Actions */}
-      <div className="col-span-2 flex justify-end items-center relative">
+      <div className="col-span-2 flex justify-end items-center gap-1 relative">
+        <ShareToggleButton 
+          item={{ 
+            id: folder.id, 
+            is_shared: folder.is_shared, 
+            user_id: folder.user_id,
+            name: folder.name
+          }}
+          type="folder"
+          currentUserId={user?.id}
+        />
+        
         <div ref={menuRef}>
           <button
             className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-200 transition-colors focus:outline-none"

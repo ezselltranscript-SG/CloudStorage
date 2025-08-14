@@ -6,14 +6,14 @@ import { useAuth } from '../contexts/AuthContext';
 /**
  * Hook para obtener archivos por ID de carpeta del usuario actual
  * @param folderId - ID de la carpeta
+ * @param includeShared - Si incluir archivos compartidos por otros usuarios
  */
-export const useFilesByFolderId = (folderId: string | null) => {
-  const { user } = useAuth();
-  
+export const useFilesByFolderId = (folderId?: string) => {
   return useQuery({
-    queryKey: ['files', 'folder', folderId, user?.id],
-    queryFn: () => fileService.getFilesByFolderId(folderId!, user?.id),
-    enabled: !!folderId && !!user, // Solo ejecutar si hay un ID de carpeta y un usuario autenticado
+    queryKey: ['files', folderId],
+    queryFn: () => fileService.getFilesByFolderId(folderId!),
+    enabled: !!folderId,
+    staleTime: 30000, // 30 segundos
   });
 };
 
@@ -40,7 +40,7 @@ export const useUploadFile = () => {
   
   return useMutation({
     mutationFn: ({ file, fileData }: { 
-      file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string }; 
+      file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string; is_shared?: boolean }; 
       fileData: Blob 
     }) => fileService.uploadFile(file, fileData, user?.id),
     onSuccess: (newFile) => {
@@ -125,6 +125,28 @@ export const useRenameFile = () => {
       });
       queryClient.invalidateQueries({ 
         queryKey: ['files', updatedFile.id, user?.id] 
+      });
+    },
+  });
+};
+
+/**
+ * Hook para cambiar el estado de compartición de un archivo
+ */
+export const useToggleFileSharing = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: ({ fileId, isShared }: { fileId: string; isShared: boolean }) => 
+      fileService.toggleFileSharing(fileId, isShared, user?.id!),
+    onSuccess: (updatedFile) => {
+      // Invalidar consultas para actualizar la UI
+      queryClient.invalidateQueries({ 
+        queryKey: ['files', 'folder', updatedFile?.folder_id, user?.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files', updatedFile?.id, user?.id] 
       });
     },
   });

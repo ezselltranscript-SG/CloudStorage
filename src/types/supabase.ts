@@ -16,6 +16,7 @@ export interface Database {
           parent_id: string | null
           created_at: string
           user_id: string
+          is_shared: boolean
         }
         Insert: {
           id?: string
@@ -23,6 +24,7 @@ export interface Database {
           parent_id?: string | null
           created_at?: string
           user_id?: string
+          is_shared?: boolean
         }
         Update: {
           id?: string
@@ -30,6 +32,7 @@ export interface Database {
           parent_id?: string | null
           created_at?: string
           user_id?: string
+          is_shared?: boolean
         }
       }
       files: {
@@ -40,6 +43,7 @@ export interface Database {
           storage_path: string
           created_at: string
           user_id: string
+          is_shared: boolean
         }
         Insert: {
           id?: string
@@ -48,6 +52,7 @@ export interface Database {
           storage_path: string
           created_at?: string
           user_id?: string
+          is_shared?: boolean
         }
         Update: {
           id?: string
@@ -56,6 +61,7 @@ export interface Database {
           storage_path?: string
           created_at?: string
           user_id?: string
+          is_shared?: boolean
         }
       }
     }

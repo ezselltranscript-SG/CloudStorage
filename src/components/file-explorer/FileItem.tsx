@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { MoreHorizontal, Download, Trash2, Pencil, Share2, ExternalLink } from 'lucide-react';
+import { MoreHorizontal, Download, Trash2, ExternalLink, Share2, Pencil } from 'lucide-react';
 import { formatFileSize, getFileIcon } from '../../types/file';
+import { ShareToggleButton } from './ShareToggleButton';
+import { useAuth } from '../../contexts/AuthContext';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 
 interface FileItemProps {
@@ -13,6 +15,8 @@ interface FileItemProps {
     mimetype: string;
     created_at: string;
     updated_at: string;
+    user_id: string;
+    is_shared: boolean;
   };
   onRename?: (file: any) => void;
   onDelete?: (file: any) => void;
@@ -31,6 +35,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setIsMenuOpen(false));
 
@@ -52,7 +57,14 @@ export const FileItem: React.FC<FileItemProps> = ({
           {FileIconComponent && <FileIconComponent className="h-4 w-4 text-slate-500" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium text-slate-800 truncate">{file.filename}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-slate-800 truncate">{file.filename}</div>
+            {file.is_shared && file.user_id !== user?.id && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                Shared
+              </span>
+            )}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">{file.mimetype || 'File'}</div>
         </div>
       </div>
@@ -69,6 +81,17 @@ export const FileItem: React.FC<FileItemProps> = ({
       
       {/* Acciones */}
       <div className="col-span-2 flex justify-end gap-1 relative">
+        <ShareToggleButton 
+          item={{ 
+            id: file.id, 
+            is_shared: file.is_shared, 
+            user_id: file.user_id,
+            filename: file.filename
+          }}
+          type="file"
+          currentUserId={user?.id}
+        />
+        
         <button
           onClick={() => onPreview && onPreview(file)}
           className="p-1.5 rounded-md hover:bg-slate-200 transition-colors group"
