@@ -9,10 +9,12 @@ import { useAuth } from '../contexts/AuthContext';
  * @param includeShared - Si incluir archivos compartidos por otros usuarios
  */
 export const useFilesByFolderId = (folderId?: string) => {
+  const { user } = useAuth();
+  
   return useQuery({
     queryKey: ['files', folderId],
     queryFn: () => fileService.getFilesByFolderId(folderId!),
-    enabled: !!folderId,
+    enabled: !!folderId && !!user?.id,
     staleTime: 30000, // 30 segundos
   });
 };

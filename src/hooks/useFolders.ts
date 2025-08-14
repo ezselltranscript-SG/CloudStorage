@@ -8,9 +8,12 @@ import { useAuth } from '../contexts/AuthContext';
  * @param includeShared - Si incluir carpetas compartidas por otros usuarios
  */
 export const useAllFolders = () => {
+  const { user } = useAuth();
+  
   return useQuery({
     queryKey: ['folders'],
     queryFn: () => folderService.getAllFolders(),
+    enabled: !!user?.id,
     staleTime: 30000, // 30 segundos
   });
 };
@@ -21,9 +24,12 @@ export const useAllFolders = () => {
  * @param includeShared - Si incluir carpetas compartidas por otros usuarios
  */
 export const useFoldersByParentId = (parentId: string | null) => {
+  const { user } = useAuth();
+  
   return useQuery({
     queryKey: ['folders', 'parent', parentId],
     queryFn: () => folderService.getFoldersByParentId(parentId),
+    enabled: !!user?.id,
     staleTime: 30000, // 30 segundos
   });
 };

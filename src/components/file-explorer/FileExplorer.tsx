@@ -19,15 +19,11 @@ import type { Folder } from '../../services/supabase/folder-service';
 interface FileExplorerProps {
   currentFolderId: string | null;
   onFolderClick: (folderId: string | null) => void;
-  isSharedView?: boolean;
-  isTrashView?: boolean;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
   currentFolderId, 
-  onFolderClick,
-  isSharedView = false,
-  isTrashView = false
+  onFolderClick
 }) => {
   // Estados para búsqueda y filtrado
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,31 +104,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   // Filtrado de archivos y carpetas por búsqueda
   // Aplicamos filtros adicionales según la vista (compartida o papelera)
   const filteredFolders = folders?.filter(folder => {
-    // Filtro básico por búsqueda
+    // Solo filtro por búsqueda - mostrar todas las carpetas activas
     const matchesSearch = folder.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Filtros adicionales según la vista
-    if (isSharedView) {
-      return matchesSearch && folder.is_shared;
-    } else if (isTrashView) {
-      return matchesSearch && folder.is_deleted;
-    }
-    
-    return matchesSearch;
+    return matchesSearch && !folder.deleted_at; // Solo excluir carpetas eliminadas
   }) || [];
   
   const filteredFiles = files?.filter(file => {
-    // Filtro básico por búsqueda
+    // Solo filtro por búsqueda - mostrar todos los archivos activos
     const matchesSearch = file.filename.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Filtros adicionales según la vista
-    if (isSharedView) {
-      return matchesSearch && file.is_shared;
-    } else if (isTrashView) {
-      return matchesSearch && file.is_deleted;
-    }
-    
-    return matchesSearch;
+    return matchesSearch && !file.deleted_at; // Solo excluir archivos eliminados
   }) || [];
   
   // Handlers para drag & drop
