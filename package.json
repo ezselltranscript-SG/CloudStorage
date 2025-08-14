@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "postbuild": "xcopy /E /I /Y public\\* dist\\ && copy src\\index.css dist\\",
+    "postbuild": "cp -r public/* dist/ && cp src/index.css dist/",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "vite preview --port 3000"
