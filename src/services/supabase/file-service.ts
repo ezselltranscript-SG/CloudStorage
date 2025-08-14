@@ -16,19 +16,27 @@ export const fileService = {
    * @param userId - ID del usuario autenticado
    * @param includeShared - Si incluir archivos compartidos por otros usuarios
    */
-  async getFilesByFolderId(folderId: string) {
+  async getFilesByFolderId(folderId: string | null) {
     // Verificar autenticación antes de la query
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('files')
       .select('*')
-      .eq('folder_id', folderId)
       .is('deleted_at', null) // Solo archivos activos
       .order('id');
+
+    // Manejar correctamente el caso cuando folderId es null
+    if (folderId === null || folderId === 'null') {
+      query = query.is('folder_id', null);
+    } else {
+      query = query.eq('folder_id', folderId);
+    }
+
+    const { data, error } = await query;
     
     if (error) {
       console.error('Supabase error:', error);

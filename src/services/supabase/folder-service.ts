@@ -48,12 +48,20 @@ export const folderService = {
       throw new Error('User not authenticated');
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('folders')
       .select('*')
-      .eq('parent_id', parentId)
       .is('deleted_at', null) // Solo carpetas activas
       .order('created_at', { ascending: false });
+
+    // Manejar correctamente el caso cuando parentId es null
+    if (parentId === null) {
+      query = query.is('parent_id', null);
+    } else {
+      query = query.eq('parent_id', parentId);
+    }
+
+    const { data, error } = await query;
     
     if (error) {
       console.error('Supabase error:', error);

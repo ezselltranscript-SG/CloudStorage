@@ -13,8 +13,8 @@ export const useFilesByFolderId = (folderId?: string) => {
   
   return useQuery({
     queryKey: ['files', folderId],
-    queryFn: () => fileService.getFilesByFolderId(folderId!),
-    enabled: !!folderId && !!user?.id,
+    queryFn: () => fileService.getFilesByFolderId(folderId || null),
+    enabled: !!user?.id,
     staleTime: 30000, // 30 segundos
   });
 };
