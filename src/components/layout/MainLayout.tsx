@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar.js';
-import { FileExplorer } from '../file-explorer/FileExplorer.js';
 import { UserProfile } from '../auth/UserProfile';
 import { Search, Bell, Menu, X, HelpCircle, Settings } from 'lucide-react';
 
@@ -9,22 +9,13 @@ interface MainLayoutProps {
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = () => {
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-
-  const handleFolderClick = (folderId: string | null) => {
-    setCurrentFolderId(folderId);
-  };
-
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar with toggle functionality */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 ease-in-out overflow-hidden`}>
-        <Sidebar 
-          currentFolderId={currentFolderId}
-          onFolderClick={handleFolderClick}
-        />
+        <Sidebar />
       </div>
       
       <div className="flex-1 flex flex-col min-w-0">
@@ -77,10 +68,7 @@ export const MainLayout: React.FC<MainLayoutProps> = () => {
         
         {/* Main content */}
         <main className="flex-1 p-6 overflow-y-auto">
-          <FileExplorer 
-            currentFolderId={currentFolderId}
-            onFolderClick={handleFolderClick}
-          />
+          <Outlet />
         </main>
       </div>
     </div>

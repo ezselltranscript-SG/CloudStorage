@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
-import { FileExplorer } from '../components/file-explorer/FileExplorer';
+import { FileExplorerPage, SharedFilesPage } from '../components/pages/FileExplorerPage';
 import { TrashPage } from '../components/trash/TrashPage';
 import { AdminApp } from '../admin/AdminApp';
 import { useAuth } from '../hooks/useAuth';
@@ -33,9 +33,9 @@ export const AppRoutes: React.FC = () => {
       
       {/* Main app routes */}
       <Route path="/" element={<MainLayout />}>
-        <Route index element={<FileExplorer currentFolderId={null} onFolderClick={(id) => console.log('Folder clicked:', id)} />} />
-        <Route path="folder/:folderId" element={<FileExplorer currentFolderId={null} onFolderClick={(id) => console.log('Folder clicked:', id)} />} />
-        <Route path="shared" element={<FileExplorer currentFolderId={null} onFolderClick={(id) => console.log('Folder clicked:', id)} isSharedView={true} />} />
+        <Route index element={<FileExplorerPage />} />
+        <Route path="folder/:folderId" element={<FileExplorerPage />} />
+        <Route path="shared" element={<SharedFilesPage />} />
         <Route path="trash" element={<TrashPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

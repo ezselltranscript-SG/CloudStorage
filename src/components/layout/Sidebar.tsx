@@ -2,20 +2,22 @@ import React from 'react';
 import { FolderPlus, Home, Clock, Trash2, Settings, Cloud, Star, Share2 } from 'lucide-react';
 import { FolderTree } from '../navigation/FolderTree';
 import { cn } from '../../lib/utils/cn';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export interface SidebarProps {
   className?: string;
-  currentFolderId: string | null;
-  onFolderClick: (folderId: string | null) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-  className,
-  currentFolderId,
-  onFolderClick
+  className
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Determine current section based on URL
+  const isTrashActive = location.pathname === '/trash';
+  const isSharedActive = location.pathname === '/shared';
+  const isHomeActive = location.pathname === '/' || location.pathname.startsWith('/folder/');
   return (
     <aside className={`h-screen w-64 bg-white border-r border-slate-200 flex flex-col ${className || ''}`}>
       {/* Logo and brand */}
@@ -50,11 +52,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             className={cn(
               "flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm transition",
-              currentFolderId === null 
+              isHomeActive 
                 ? "bg-blue-50 text-blue-600 font-medium" 
                 : "text-slate-700 hover:bg-slate-50"
             )}
-            onClick={() => onFolderClick(null)}
+            onClick={() => navigate('/')}
           >
             <Home className="h-4 w-4 flex-shrink-0" />
             <span>My Files</span>
@@ -69,8 +71,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           
           <button
-            className="flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition"
-            onClick={() => {}}
+            className={cn(
+              "flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm transition",
+              isSharedActive 
+                ? "bg-blue-50 text-blue-600 font-medium" 
+                : "text-slate-700 hover:bg-slate-50"
+            )}
+            onClick={() => navigate('/shared')}
           >
             <Share2 className="h-4 w-4 flex-shrink-0" />
             <span>Shared</span>
@@ -85,7 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           
           <button
-            className="flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition"
+            className={cn(
+              "flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm transition",
+              isTrashActive 
+                ? "bg-blue-50 text-blue-600 font-medium" 
+                : "text-slate-700 hover:bg-slate-50"
+            )}
             onClick={() => navigate('/trash')}
           >
             <Trash2 className="h-4 w-4 flex-shrink-0" />
@@ -103,8 +115,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </h2>
           <div className="px-1">
             <FolderTree 
-              onFolderSelect={onFolderClick}
-              selectedFolderId={currentFolderId}
+              onFolderSelect={(folderId) => {
+                if (folderId) {
+                  navigate(`/folder/${folderId}`);
+                } else {
+                  navigate('/');
+                }
+              }}
+              selectedFolderId={location.pathname.startsWith('/folder/') 
+                ? location.pathname.split('/folder/')[1] 
+                : null
+              }
             />
           </div>
         </div>
