@@ -61,8 +61,15 @@ export class UserService extends AdminServiceBase {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       
+      // Map UI sort keys to DB columns
+      const dbOrderColumn =
+        sortBy === 'createdAt' ? 'created_at' :
+        sortBy === 'lastLoginAt' ? 'last_login_at' :
+        sortBy === 'storageUsed' ? 'storage_used' :
+        'email';
+      
       query_builder = query_builder
-        .order(sortBy, { ascending: sortDirection === 'asc' })
+        .order(dbOrderColumn, { ascending: sortDirection === 'asc' })
         .range(from, to);
       
       // Execute the query
@@ -471,7 +478,7 @@ export class UserService extends AdminServiceBase {
       // Get folder count
       const { count: folderCount, error: foldersError } = await this.supabase
         .from('folders')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .eq('user_id', userId);
       
       if (foldersError) throw foldersError;

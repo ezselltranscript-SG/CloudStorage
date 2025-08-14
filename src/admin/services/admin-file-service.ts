@@ -62,15 +62,15 @@ export class AdminFileService extends AdminServiceBase {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       
-      // Apply sorting
-      let sortColumn = sortBy;
-      if (sortBy === 'createdAt') sortColumn = 'createdAt';
-      if (sortBy === 'updatedAt') sortColumn = 'updatedAt';
-      if (sortBy === 'name') sortColumn = 'name';
-      if (sortBy === 'size') sortColumn = 'size';
+      // Apply sorting (map UI keys to DB columns)
+      const dbOrderColumn =
+        sortBy === 'createdAt' ? 'created_at' :
+        sortBy === 'updatedAt' ? 'updated_at' :
+        sortBy === 'name' ? 'name' :
+        'size';
       
       query_builder = query_builder
-        .order(sortColumn, { ascending: sortDirection === 'asc' })
+        .order(dbOrderColumn, { ascending: sortDirection === 'asc' })
         .range(from, to);
       
       // Execute the query
@@ -440,7 +440,7 @@ export class AdminFileService extends AdminServiceBase {
       // Get total folders
       const { count: folderCount, error: foldersError } = await this.supabase
         .from('folders')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .is('deleted_at', null);
       
       if (foldersError) throw foldersError;
@@ -448,7 +448,7 @@ export class AdminFileService extends AdminServiceBase {
       // Get active users
       const { count: userCount, error: usersError } = await this.supabase
         .from('users')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .eq('is_active', true)
         .is('is_suspended', false);
       

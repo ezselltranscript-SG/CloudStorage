@@ -309,7 +309,7 @@ export class RoleService extends AdminServiceBase {
       // Check if any users have this role
       const { count, error: countError } = await this.supabase
         .from('user_roles')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: false })
         .eq('role_id', roleId);
       
       if (countError) {
