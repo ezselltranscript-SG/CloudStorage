@@ -36,7 +36,6 @@ export const SharedFilesPage: React.FC = () => {
     <FileExplorer 
       currentFolderId={currentFolderId}
       onFolderClick={handleFolderClick}
-      isSharedView={true}
     />
   );
 };

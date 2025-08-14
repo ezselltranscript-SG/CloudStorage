@@ -1,10 +1,8 @@
 import React from 'react';
 
 export interface FileExplorerProps {
-  currentFolderId?: string | null;
-  onFolderClick?: (folderId: string | null) => void;
-  isSharedView?: boolean;
-  isTrashView?: boolean;
+  currentFolderId: string | null;
+  onFolderClick: (folderId: string | null) => void;
 }
 
 export const FileExplorer: React.FC<FileExplorerProps>;
