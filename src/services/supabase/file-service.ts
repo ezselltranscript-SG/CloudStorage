@@ -20,7 +20,7 @@ export const fileService = {
       .from('files')
       .select('*')
       .eq('folder_id', folderId)
-      .order('filename');
+      .order('id');
     
     // Si se proporciona un userId, filtrar por ese usuario
     if (userId) {

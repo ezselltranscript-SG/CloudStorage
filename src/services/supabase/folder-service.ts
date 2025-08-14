@@ -92,6 +92,18 @@ export const folderService = {
     if (!userId) throw new Error('Missing userId for folder creation');
 
     const baseName = (folder as any).name as string;
+    // Validar parent_id: si viene, debe existir y pertenecer al usuario; si no, lo forzamos a null
+    let normalizedParentId: string | null = (folder as any).parent_id ?? null;
+    if (normalizedParentId) {
+      const { data: parentRow, error: parentErr } = await supabase
+        .from('folders')
+        .select('id, user_id')
+        .eq('id', normalizedParentId)
+        .maybeSingle();
+      if (parentErr || !parentRow || parentRow.user_id !== userId) {
+        normalizedParentId = null;
+      }
+    }
     let attempt = 0;
     let nameToTry = baseName;
 
@@ -100,7 +112,7 @@ export const folderService = {
         ...folder,
         user_id: userId,
         name: nameToTry,
-        parent_id: (folder as any).parent_id ?? null,
+        parent_id: normalizedParentId,
       } as FolderInsert;
 
       const { data, error } = await supabase
