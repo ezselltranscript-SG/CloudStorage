@@ -49,7 +49,7 @@ export const fileService = {
       query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.single();
+    const { data, error } = await query.maybeSingle();
     
     if (error) throw error;
     return data;
@@ -85,7 +85,7 @@ export const fileService = {
       .from('files')
       .insert(fileRecord)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) {
       // Si hay error en la BD, eliminar el archivo del storage para mantener consistencia
@@ -113,7 +113,7 @@ export const fileService = {
       query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.select().single();
+    const { data, error } = await query.select().maybeSingle();
     
     if (error) throw error;
     return data;
@@ -136,9 +136,12 @@ export const fileService = {
       query = query.eq('user_id', userId);
     }
     
-    const { data: fileData, error: fetchError } = await query.single();
+    const { data: fileData, error: fetchError } = await query.maybeSingle();
     
     if (fetchError) throw fetchError;
+    if (!fileData || !fileData.storage_path) {
+      throw new Error('File not found or missing storage path');
+    }
     
     // 2. Eliminar el archivo del storage
     const { error: storageError } = await supabase.storage

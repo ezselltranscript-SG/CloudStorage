@@ -63,7 +63,7 @@ export class AdminServiceBase {
         .from('users')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
         
       if (!userData) return null;
       

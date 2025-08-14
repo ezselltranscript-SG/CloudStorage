@@ -15,7 +15,7 @@ export class SettingsService extends AdminServiceBase {
       const { data, error } = await this.supabase
         .from('organization_settings')
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Failed to get organization settings:', error);
@@ -196,7 +196,7 @@ export class SettingsService extends AdminServiceBase {
       const { data, error } = await this.supabase
         .from('quota_settings')
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Failed to get quota settings:', error);

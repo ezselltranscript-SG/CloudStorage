@@ -76,7 +76,7 @@ export const folderService = {
       query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.single();
+    const { data, error } = await query.maybeSingle();
     
     if (error) throw error;
     return data;
@@ -95,7 +95,7 @@ export const folderService = {
       .from('folders')
       .insert(folderWithUser)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     return data;
@@ -118,7 +118,7 @@ export const folderService = {
       query = query.eq('user_id', userId);
     }
     
-    const { data, error } = await query.select().single();
+    const { data, error } = await query.select().maybeSingle();
     
     if (error) throw error;
     return data;

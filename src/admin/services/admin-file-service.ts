@@ -217,7 +217,7 @@ export class AdminFileService extends AdminServiceBase {
         .from('files')
         .select('*, users!inner(email)')
         .eq('id', fileId)
-        .single();
+        .maybeSingle();
       
       if (fileError || !file) {
         return { success: false, error: fileError?.message || 'File not found' };
@@ -271,7 +271,7 @@ export class AdminFileService extends AdminServiceBase {
         .from('files')
         .select('*, users!inner(email)')
         .eq('id', fileId)
-        .single();
+        .maybeSingle();
       
       if (fileError || !file) {
         return { success: false, error: fileError?.message || 'File not found' };
@@ -325,7 +325,7 @@ export class AdminFileService extends AdminServiceBase {
         .from('folders')
         .select('*, users!inner(email)')
         .eq('id', folderId)
-        .single();
+        .maybeSingle();
       
       if (folderError || !folder) {
         return { success: false, error: folderError?.message || 'Folder not found' };
@@ -379,7 +379,7 @@ export class AdminFileService extends AdminServiceBase {
         .from('folders')
         .select('*, users!inner(email)')
         .eq('id', folderId)
-        .single();
+        .maybeSingle();
       
       if (folderError || !folder) {
         return { success: false, error: folderError?.message || 'Folder not found' };

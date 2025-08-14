@@ -164,7 +164,7 @@ export class AuditService extends AdminServiceBase {
         .from('audit_logs')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) return null;

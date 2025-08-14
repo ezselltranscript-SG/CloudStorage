@@ -160,7 +160,7 @@ export class UserService extends AdminServiceBase {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching user:', error);

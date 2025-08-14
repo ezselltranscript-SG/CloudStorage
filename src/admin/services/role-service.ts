@@ -92,7 +92,7 @@ export class RoleService extends AdminServiceBase {
         .from('roles')
         .select('*')
         .eq('id', roleId)
-        .single();
+        .maybeSingle();
       
       if (roleError || !role) return null;
       
