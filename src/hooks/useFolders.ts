@@ -52,10 +52,7 @@ export const useCreateFolder = () => {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: (folder: FolderInsert) => folderService.createFolder({
-      ...folder,
-      user_id: user?.id
-    }),
+    mutationFn: (folder: FolderInsert) => folderService.createFolder(folder, user?.id),
     onSuccess: (newFolder) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
