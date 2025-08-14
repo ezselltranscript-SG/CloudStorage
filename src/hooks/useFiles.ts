@@ -115,7 +115,8 @@ export const useRenameFile = () => {
   
   return useMutation({
     mutationFn: ({ fileId, newFilename }: { fileId: string; newFilename: string }) => {
-      return fileService.updateFile(fileId, { filename: newFilename }, user?.id);
+      // Usar 'name' que es el campo real en la base de datos
+      return fileService.updateFile(fileId, { name: newFilename } as any, user?.id);
     },
     onSuccess: (updatedFile) => {
       // Invalidar consultas para actualizar la UI
