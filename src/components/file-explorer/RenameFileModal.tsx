@@ -107,10 +107,13 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
+      <div 
+        className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-xl font-semibold mb-4">Rename File</h2>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="mb-4">
             <Label htmlFor="fileName">New name</Label>
             <Input
@@ -120,6 +123,12 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
               placeholder="File name"
               className="w-full"
               autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isSubmitDisabled) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
             />
             
             {/* Extension warning */}
@@ -150,7 +159,10 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
             <Button 
               type="button" 
               variant="outline" 
-              onClick={onClose}
+              onClick={(e) => {
+                e.preventDefault();
+                onClose();
+              }}
               disabled={isPending}
             >
               Cancel
@@ -158,6 +170,12 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
             <Button 
               type="submit"
               disabled={isSubmitDisabled}
+              onClick={(e) => {
+                if (isSubmitDisabled) {
+                  e.preventDefault();
+                  return;
+                }
+              }}
             >
               {isPending ? 'Renaming...' : 'Rename'}
             </Button>
