@@ -63,8 +63,12 @@ export const fileService = {
    */
   async uploadFile(file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string }, fileData: Blob, userId?: string) {
     // 1. Subir el archivo al Storage
+    if (!userId) {
+      throw new Error('Missing userId for upload');
+    }
     const fileExt = file.filename.split('.').pop();
-    const filePath = `${file.folder_id}/${file.id}.${fileExt}`;
+    // Guardamos bajo prefijo del usuario para cumplir RLS de Storage (userId/...)
+    const filePath = `${userId}/${file.folder_id}/${file.id}.${fileExt}`;
     
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
