@@ -112,16 +112,9 @@ export const fileService = {
    * @param userId - ID del usuario autenticado
    */
   async updateFile(id: string, file: FileUpdate, userId?: string) {
-    // Mapear posible filename -> name antes de actualizar
-    const toUpdate: any = { ...file } as any;
-    if (Object.prototype.hasOwnProperty.call(toUpdate, 'filename')) {
-      toUpdate.name = toUpdate.filename;
-      delete toUpdate.filename;
-    }
-
     let query = supabase
       .from('files')
-      .update(toUpdate)
+      .update(file)
       .eq('id', id);
     
     // Si se proporciona un userId, filtrar por ese usuario
