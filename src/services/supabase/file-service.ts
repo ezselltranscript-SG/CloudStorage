@@ -17,6 +17,12 @@ export const fileService = {
    * @param includeShared - Si incluir archivos compartidos por otros usuarios
    */
   async getFilesByFolderId(folderId: string) {
+    // Verificar autenticación antes de la query
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('files')
       .select('*')
@@ -24,7 +30,10 @@ export const fileService = {
       .is('deleted_at', null) // Solo archivos activos
       .order('id');
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     // Adapt DB -> UI: exponer filename derivado de name
     return (data ?? []).map((row: any) => ({ ...row, filename: row.name }));
   },

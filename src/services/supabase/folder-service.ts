@@ -16,13 +16,22 @@ export const folderService = {
    * @param includeShared - Si incluir carpetas compartidas por otros usuarios
    */
   async getAllFolders() {
+    // Verificar autenticación antes de la query
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('folders')
       .select('*')
       .is('deleted_at', null) // Solo carpetas activas
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     return data || [];
   },
 
@@ -33,6 +42,12 @@ export const folderService = {
    * @param includeShared - Si incluir carpetas compartidas por otros usuarios
    */
   async getFoldersByParentId(parentId: string | null) {
+    // Verificar autenticación antes de la query
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('folders')
       .select('*')
@@ -40,7 +55,10 @@ export const folderService = {
       .is('deleted_at', null) // Solo carpetas activas
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
     return data || [];
   },
 
