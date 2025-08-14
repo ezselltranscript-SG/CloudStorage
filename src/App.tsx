@@ -20,7 +20,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AuthProvider>
-          <Router>
+          <Router basename="/">
             <AppRoutes />
           </Router>
         </AuthProvider>

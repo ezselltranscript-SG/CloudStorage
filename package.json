@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "postbuild": "shx cp public/_redirects dist/_redirects && shx cp dist/index.html dist/404.html",
+    "postbuild": "shx cp public/_redirects dist/_redirects && shx cp dist/index.html dist/404.html && node scripts/verify-build.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "vite preview --port 3000"
+    "start": "vite preview --port 3000",
+    "verify-build": "node scripts/verify-build.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
