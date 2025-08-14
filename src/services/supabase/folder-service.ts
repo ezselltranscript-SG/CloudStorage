@@ -91,45 +91,40 @@ export const folderService = {
     // Requerimos userId para cumplir RLS y unicidad por usuario
     if (!userId) throw new Error('Missing userId for folder creation');
 
-    // 1) Obtener nombres existentes de hermanos (misma parent_id) del usuario
-    let siblingsQuery = supabase
-      .from('folders')
-      .select('name')
-      .eq('user_id', userId);
-
-    if (folder.parent_id === null) {
-      siblingsQuery = siblingsQuery.is('parent_id', null);
-    } else if (folder.parent_id) {
-      siblingsQuery = siblingsQuery.eq('parent_id', folder.parent_id);
-    } else {
-      // Si viene undefined, tratamos como null (raíz)
-      siblingsQuery = siblingsQuery.is('parent_id', null);
-    }
-
-    const { data: siblings, error: siblingsError } = await siblingsQuery;
-    if (siblingsError) throw siblingsError;
-
-    const existing = new Set((siblings ?? []).map(s => s.name.toLowerCase()));
     const baseName = (folder as any).name as string;
-    let uniqueName = baseName;
-    let counter = 2;
-    while (existing.has(uniqueName.toLowerCase())) {
-      uniqueName = `${baseName} (${counter})`;
-      counter++;
-      if (counter > 100) break; // safety guard
+    let attempt = 0;
+    let nameToTry = baseName;
+
+    while (attempt < 20) {
+      const payload: FolderInsert = {
+        ...folder,
+        user_id: userId,
+        name: nameToTry,
+        parent_id: (folder as any).parent_id ?? null,
+      } as FolderInsert;
+
+      const { data, error } = await supabase
+        .from('folders')
+        .insert(payload)
+        .select()
+        .maybeSingle();
+
+      if (!error) return data;
+
+      // Si es conflicto de unicidad, incrementamos sufijo y reintentamos
+      const code = (error as any)?.code;
+      const status = (error as any)?.status;
+      if (code === '23505' || status === 409) {
+        attempt++;
+        nameToTry = `${baseName} (${attempt + 1})`;
+        continue;
+      }
+
+      // Otro tipo de error: propagar
+      throw error;
     }
 
-    const folderWithUser: FolderInsert = { ...folder, user_id: userId, name: uniqueName } as FolderInsert;
-
-    // 2) Insertar
-    const { data, error } = await supabase
-      .from('folders')
-      .insert(folderWithUser)
-      .select()
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
+    throw new Error('Could not create a unique folder name after multiple attempts');
   },
 
   /**
