@@ -80,6 +80,8 @@ export const fileService = {
       id: file.id,
       // Mapear UI filename -> DB name
       name: file.filename,
+      size: (fileData as any)?.size ?? undefined,
+      type: (fileData as any)?.type || 'application/octet-stream',
       folder_id: file.folder_id,
       storage_path: filePath,
       user_id: userId as string
@@ -97,7 +99,8 @@ export const fileService = {
       throw error;
     }
     
-    return data;
+    // Adapt DB -> UI en la respuesta
+    return data ? { ...data, filename: (data as any).name } : data;
   },
 
   /**
