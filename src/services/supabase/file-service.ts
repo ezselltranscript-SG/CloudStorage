@@ -28,9 +28,9 @@ export const fileService = {
     }
     
     const { data, error } = await query;
-    
     if (error) throw error;
-    return data;
+    // Adapt DB -> UI: exponer filename derivado de name
+    return (data ?? []).map((row: any) => ({ ...row, filename: row.name }));
   },
 
   /**
@@ -50,9 +50,8 @@ export const fileService = {
     }
     
     const { data, error } = await query.maybeSingle();
-    
     if (error) throw error;
-    return data;
+    return data ? { ...data, filename: (data as any).name } : data;
   },
 
   /**
@@ -79,11 +78,12 @@ export const fileService = {
     // 2. Crear el registro en la base de datos
     const fileRecord: FileInsert = {
       id: file.id,
-      filename: file.filename,
+      // Mapear UI filename -> DB name
+      name: file.filename,
       folder_id: file.folder_id,
       storage_path: filePath,
-      user_id: userId
-    };
+      user_id: userId as string
+    } as unknown as FileInsert;
 
     const { data, error } = await supabase
       .from('files')
@@ -107,9 +107,16 @@ export const fileService = {
    * @param userId - ID del usuario autenticado
    */
   async updateFile(id: string, file: FileUpdate, userId?: string) {
+    // Mapear posible filename -> name antes de actualizar
+    const toUpdate: any = { ...file } as any;
+    if (Object.prototype.hasOwnProperty.call(toUpdate, 'filename')) {
+      toUpdate.name = toUpdate.filename;
+      delete toUpdate.filename;
+    }
+
     let query = supabase
       .from('files')
-      .update(file)
+      .update(toUpdate)
       .eq('id', id);
     
     // Si se proporciona un userId, filtrar por ese usuario
