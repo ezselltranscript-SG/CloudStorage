@@ -21,6 +21,10 @@ export class SettingsService extends AdminServiceBase {
         console.error('Failed to get organization settings:', error);
         return null;
       }
+      if (!data) {
+        // Tabla vacía: retorna null de forma segura
+        return null;
+      }
       
       return {
         id: data.id,
@@ -113,14 +117,15 @@ export class SettingsService extends AdminServiceBase {
       const { data, error } = await this.supabase
         .from('feature_flags')
         .select('*')
-        .order('name', { ascending: true });
+        // Ordena por 'id' para evitar 400 si 'name' no existe en el esquema
+        .order('id', { ascending: true });
       
       if (error) throw error;
       
       return (data || []).map(flag => ({
         id: flag.id,
-        name: flag.name,
-        description: flag.description,
+        name: (flag.name ?? flag.key ?? flag.code ?? ''),
+        description: (flag.description ?? ''),
         enabled: flag.enabled,
         updatedAt: flag.updated_at,
         updatedBy: flag.updated_by
@@ -146,7 +151,7 @@ export class SettingsService extends AdminServiceBase {
         .from('feature_flags')
         .select('*')
         .eq('id', flagId)
-        .single();
+        .maybeSingle();
       
       if (flagError || !originalFlag) {
         return { success: false, error: flagError?.message || 'Feature flag not found' };
@@ -173,7 +178,7 @@ export class SettingsService extends AdminServiceBase {
         'settings_updated' as AuditLogAction,
         'settings' as const,
         flagId,
-        `Feature Flag: ${originalFlag.name}`,
+        `Feature Flag: ${originalFlag.name ?? originalFlag.key}`,
         {
           changes: {
             enabled: { from: originalFlag.enabled, to: enabled }
@@ -200,6 +205,9 @@ export class SettingsService extends AdminServiceBase {
       
       if (error) {
         console.error('Failed to get quota settings:', error);
+        return null;
+      }
+      if (!data) {
         return null;
       }
       

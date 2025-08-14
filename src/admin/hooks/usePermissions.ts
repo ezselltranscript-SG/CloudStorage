@@ -73,52 +73,43 @@ export const usePermissions = () => {
       try {
         setIsLoading(true);
         
-        // Intenta obtener el rol del usuario directamente
-        let { data, error } = await supabase
+        // Obtiene relación básica: user_roles.role_id para el usuario
+        const { data: ur, error: urError } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role_id')
           .eq('user_id', user.id)
           .maybeSingle();
-        
-        // Si hay un error o no hay datos, intentamos una consulta alternativa
-        if (error || !data) {
-          console.log('Primer intento fallido, probando consulta alternativa');
-          
-          // Intenta obtener cualquier campo de la tabla user_roles
-          const response = await supabase
-            .from('user_roles')
-            .select('*')
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          data = response.data;
-          error = response.error;
-          
-          if (error) {
-            console.error('Error en consulta alternativa:', error);
-          } else if (data) {
-            console.log('Datos obtenidos en consulta alternativa:', data);
-          }
+
+        if (urError) {
+          console.error('Error obteniendo user_roles:', urError);
+          setUserRole('user');
+          return;
         }
-        
-        // Si tenemos datos, intentamos extraer el rol
-        if (data) {
-          // Verificamos si existe la propiedad 'role'
-          if ('role' in data && typeof data.role === 'string') {
-            setUserRole(data.role as Role);
-          } 
-          // Si no existe 'role' pero existe 'role_id', usamos ese
-          else if ('role_id' in data && typeof data.role_id === 'string') {
-            setUserRole(data.role_id as Role);
-          }
-          // Si no hay ninguno de los dos, usamos el rol por defecto
-          else {
-            console.warn('No se encontró columna role o role_id en los datos:', data);
-            setUserRole('user');
-          }
+
+        if (!ur || !ur.role_id) {
+          // Sin asignación explícita, degrada a 'user'
+          setUserRole('user');
+          return;
+        }
+
+        // Resuelve el nombre del rol en la tabla roles
+        const { data: roleRow, error: roleErr } = await supabase
+          .from('roles')
+          .select('name')
+          .eq('id', ur.role_id)
+          .maybeSingle();
+
+        if (roleErr || !roleRow) {
+          console.error('No se pudo resolver el nombre del rol:', roleErr);
+          setUserRole('user');
+          return;
+        }
+
+        const roleName = (roleRow.name || '').toLowerCase();
+        if (roleName === 'admin' || roleName === 'manager' || roleName === 'user') {
+          setUserRole(roleName as Role);
         } else {
-          // Si no hay datos, asignamos el rol por defecto
-          console.warn('No se encontraron datos de rol para el usuario:', user.id);
+          // Cualquier otro rol se mapea a permisos mínimos por defecto
           setUserRole('user');
         }
       } catch (err) {
@@ -137,8 +128,8 @@ export const usePermissions = () => {
   // Check if user has a specific permission
   const hasPermission = (permission: Permission): boolean => {
     if (!userRole) return false;
-    
-    return rolePermissions[userRole].includes(permission);
+    const perms = rolePermissions[userRole];
+    return Array.isArray(perms) && perms.includes(permission);
   };
   
   // Get all permissions for the current user
