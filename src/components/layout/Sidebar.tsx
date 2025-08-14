@@ -2,6 +2,7 @@ import React from 'react';
 import { FolderPlus, Home, Clock, Trash2, Settings, Cloud, Star, Share2 } from 'lucide-react';
 import { FolderTree } from '../navigation/FolderTree';
 import { cn } from '../../lib/utils/cn';
+import { useNavigate } from 'react-router-dom';
 
 export interface SidebarProps {
   className?: string;
@@ -14,6 +15,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentFolderId,
   onFolderClick
 }) => {
+  const navigate = useNavigate();
   return (
     <aside className={`h-screen w-64 bg-white border-r border-slate-200 flex flex-col ${className || ''}`}>
       {/* Logo and brand */}
@@ -84,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button
             className="flex items-center w-full gap-3 px-3 py-2.5 rounded-md text-sm text-slate-700 hover:bg-slate-50 transition"
-            onClick={() => {}}
+            onClick={() => navigate('/trash')}
           >
             <Trash2 className="h-4 w-4 flex-shrink-0" />
             <span>Trash</span>

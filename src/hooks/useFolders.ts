@@ -87,19 +87,23 @@ export const useUpdateFolder = () => {
 };
 
 /**
- * Hook para eliminar una carpeta del usuario actual
+ * Hook para mover una carpeta a la papelera (soft delete)
  */
 export const useDeleteFolder = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: (folder: Folder) => folderService.deleteFolder(folder.id, user?.id),
+    mutationFn: (folder: Folder) => folderService.moveToTrash(folder.id, user?.id),
     onSuccess: (_, folder) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
       queryClient.invalidateQueries({ 
         queryKey: ['folders', 'parent', folder.parent_id, user?.id] 
+      });
+      // También invalidar la consulta de trash para que aparezca allí
+      queryClient.invalidateQueries({ 
+        queryKey: ['trash', 'folders', user?.id] 
       });
     },
   });

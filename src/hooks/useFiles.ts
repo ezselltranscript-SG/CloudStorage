@@ -75,18 +75,22 @@ export const useUpdateFile = () => {
 };
 
 /**
- * Hook para eliminar un archivo del usuario actual
+ * Hook para mover un archivo a la papelera (soft delete)
  */
 export const useDeleteFile = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: (file: File) => fileService.deleteFile(file.id, user?.id),
+    mutationFn: (file: File) => fileService.moveToTrash(file.id, user?.id),
     onSuccess: (_, file) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
         queryKey: ['files', 'folder', file.folder_id, user?.id] 
+      });
+      // También invalidar la consulta de trash para que aparezca allí
+      queryClient.invalidateQueries({ 
+        queryKey: ['trash', 'files', user?.id] 
       });
     },
   });
