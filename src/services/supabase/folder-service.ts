@@ -88,15 +88,46 @@ export const folderService = {
    * @param userId - ID del usuario autenticado
    */
   async createFolder(folder: FolderInsert, userId?: string) {
-    // Si se proporciona un userId, asociar la carpeta a ese usuario
-    const folderWithUser = userId ? { ...folder, user_id: userId } : folder;
-    
+    // Requerimos userId para cumplir RLS y unicidad por usuario
+    if (!userId) throw new Error('Missing userId for folder creation');
+
+    // 1) Obtener nombres existentes de hermanos (misma parent_id) del usuario
+    let siblingsQuery = supabase
+      .from('folders')
+      .select('name')
+      .eq('user_id', userId);
+
+    if (folder.parent_id === null) {
+      siblingsQuery = siblingsQuery.is('parent_id', null);
+    } else if (folder.parent_id) {
+      siblingsQuery = siblingsQuery.eq('parent_id', folder.parent_id);
+    } else {
+      // Si viene undefined, tratamos como null (raíz)
+      siblingsQuery = siblingsQuery.is('parent_id', null);
+    }
+
+    const { data: siblings, error: siblingsError } = await siblingsQuery;
+    if (siblingsError) throw siblingsError;
+
+    const existing = new Set((siblings ?? []).map(s => s.name.toLowerCase()));
+    const baseName = (folder as any).name as string;
+    let uniqueName = baseName;
+    let counter = 2;
+    while (existing.has(uniqueName.toLowerCase())) {
+      uniqueName = `${baseName} (${counter})`;
+      counter++;
+      if (counter > 100) break; // safety guard
+    }
+
+    const folderWithUser: FolderInsert = { ...folder, user_id: userId, name: uniqueName } as FolderInsert;
+
+    // 2) Insertar
     const { data, error } = await supabase
       .from('folders')
       .insert(folderWithUser)
       .select()
       .maybeSingle();
-    
+
     if (error) throw error;
     return data;
   },
