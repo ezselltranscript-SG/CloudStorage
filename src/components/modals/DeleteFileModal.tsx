@@ -20,7 +20,7 @@ export const DeleteFileModal: React.FC<DeleteFileModalProps> = ({ isOpen, onClos
     
     try {
       await deleteFile(file);
-      showSuccess('Archivo eliminado', `El archivo ${file.filename} ha sido eliminado correctamente.`);
+      showSuccess('Archivo eliminado', `El archivo ${file.name} ha sido eliminado correctamente.`);
       onClose();
     } catch (error) {
       console.error('Error al eliminar el archivo:', error);
@@ -34,7 +34,7 @@ export const DeleteFileModal: React.FC<DeleteFileModalProps> = ({ isOpen, onClos
         <DialogHeader>
           <DialogTitle>Eliminar archivo</DialogTitle>
           <DialogDescription>
-            ¿Estás seguro de que deseas eliminar el archivo <strong>{file?.filename}</strong>? Esta acción no se puede deshacer.
+            ¿Estás seguro de que deseas eliminar el archivo <strong>{file?.name}</strong>? Esta acción no se puede deshacer.
           </DialogDescription>
         </DialogHeader>
         

@@ -62,7 +62,7 @@ export const ShareFileModal: React.FC<ShareFileModalProps> = ({
 
         <div className="mb-6">
           <p className="text-gray-700 mb-2">
-            Public link for <strong>{file.filename}</strong>:
+            Public link for <strong>{file.name}</strong>:
           </p>
           
           <div className="flex items-center mt-3">

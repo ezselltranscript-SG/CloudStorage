@@ -20,7 +20,7 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({ isOpen, onClos
 
   useEffect(() => {
     if (file) {
-      setNewFilename(file.filename);
+      setNewFilename(file.name);
     }
   }, [file]);
 
