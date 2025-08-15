@@ -1,138 +1,151 @@
-# ClonDropbox - Modern Cloud Storage Solution
+# CloudStorage - Enterprise Cloud Storage Platform
 
 ## Overview
 
-ClonDropbox is a sophisticated web application that provides Dropbox-like file storage functionality with a modern, intuitive interface. Built with React, TypeScript, and Supabase, it offers comprehensive file and folder management capabilities in the cloud. The application follows clean architecture principles and is designed to be maintainable, scalable, and ready for enterprise use.
+CloudStorage is a comprehensive enterprise-grade cloud storage platform that combines the simplicity of Dropbox with advanced organizational features. Built with modern web technologies including React 19, TypeScript, and Supabase, it provides a complete file management ecosystem with both user-facing features and powerful administrative capabilities.
 
-This project demonstrates best practices in modern web development, including:
-- Component-based architecture with React
-- Type safety with TypeScript
-- Clean separation of concerns (presentation, business logic, data access)
-- Optimized state management with React Query and Zustand
-- Responsive design with TailwindCSS
-- Backend-as-a-Service integration with Supabase
-- Modern build tooling with Vite
+**Key Highlights:**
+- **Shared Workspace Model**: Organization-wide file access similar to Dropbox Business
+- **Dual Architecture**: Separate user and admin applications with role-based access control
+- **Modern Tech Stack**: React 19, TypeScript 5, Supabase, TailwindCSS, and Vite
+- **Enterprise Ready**: Authentication, audit logging, analytics, and user management
+- **Scalable Design**: Clean architecture with separation of concerns and modular components
 
-## Features
+## Core Features
 
-### Folder Management
-- **Create Folders**: Create new folders in the root directory or within other folders
-- **Rename Folders**: Easily rename existing folders
-- **Delete Folders**: Remove folders and their contents
-- **Navigate Folders**: Browse through hierarchical folder structure
-- **View Folders**: Display folders with intuitive UI elements
+### 🗂️ File & Folder Management
+- **Hierarchical Structure**: Create nested folders with unlimited depth
+- **Bulk Operations**: Upload multiple files, create folders, rename and delete operations
+- **Drag & Drop**: Intuitive file uploads with visual feedback
+- **File Previews**: Support for images, PDFs, and other document types
+- **Search & Filter**: Real-time search across all files and folders
+- **File Sharing**: Individual file sharing with toggle controls
 
-### File Management
-- **Upload Files**: Upload files to the root directory or specific folders
-- **Rename Files**: Change file names as needed
-- **Delete Files**: Remove files from storage
-- **Download Files**: Download files to your local device
-- **View Files**: Display files with appropriate icons based on file type
-- **Preview Files**: Preview images, PDFs and other supported formats directly in the browser
-- **Share Files**: Generate and manage public sharing links for files
-- **Drag & Drop**: Intuitive drag and drop interface for file uploads
+### 🏢 Shared Workspace Model
+- **Organization-wide Access**: All users see all files and folders by default (like Dropbox Business)
+- **Granular Sharing**: Optional individual file/folder sharing controls
+- **Visual Indicators**: Clear badges showing content shared by other users
+- **Owner Permissions**: Only file/folder owners can modify their content
+- **Seamless Collaboration**: No complex permission management required
 
-### User Interface
-- **Modern UI**: Clean, responsive interface built with TailwindCSS and ShadcnUI
-- **Context Menus**: Context menus (three dots) for quick actions on files and folders
-- **Modal Dialogs**: User-friendly modal dialogs for operations like create, rename, delete, and share
-- **Toast Notifications**: Visual feedback for operations with success/error messages
-- **Loading States**: Visual indicators during loading operations
-- **Empty States**: Informative empty states when folders contain no items
-- **Search Functionality**: Real-time search and filtering of files and folders
-- **Responsive Design**: Fully responsive layout that works on all device sizes
+### 🔐 Authentication & Security
+- **Supabase Auth**: Email/password authentication with session management
+- **Row Level Security**: Database-level access control
+- **Role-Based Access**: Admin, Manager, and User roles with specific permissions
+- **Secure Storage**: Files stored in Supabase Storage with proper access policies
+- **Session Persistence**: Automatic login state management
 
-### Technical Features
-- **Real-time Updates**: Changes reflect immediately across the interface using React Query
-- **Error Handling**: Comprehensive error handling with user-friendly messages
-- **Type Safety**: Full TypeScript integration with generated Supabase types
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Clean Architecture**: Strict separation of concerns with services, hooks, and components
-- **Optimistic Updates**: UI updates immediately before server confirmation for a snappy feel
-- **Lazy Loading**: Components and resources load only when needed
-- **Modular Design**: Highly modular code structure for maintainability and testability
-- **Extensible Framework**: Built to easily accommodate future features like authentication
+### 👑 Admin Dashboard
+- **User Management**: Create, edit, and manage user accounts
+- **Role Assignment**: Assign and modify user roles and permissions
+- **Analytics Dashboard**: Storage usage, user activity, and system metrics
+- **Audit Logging**: Complete activity tracking for compliance
+- **System Settings**: Configure platform-wide settings and preferences
+- **File Management**: Admin-level file and folder oversight
+
+### 🎨 Modern User Experience
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
+- **Dark/Light Themes**: Adaptive UI with user preference support
+- **Toast Notifications**: Real-time feedback for all operations
+- **Loading States**: Smooth loading indicators and skeleton screens
+- **Context Menus**: Right-click and dropdown menus for quick actions
+- **Keyboard Shortcuts**: Power user features for efficient navigation
 
 ## Technology Stack
 
-### Frontend
-- **React 18**: UI library for building component-based interfaces
-- **TypeScript 5**: Type-safe JavaScript for better developer experience and code quality
-- **Vite 5**: Fast, modern build tool for development with HMR (Hot Module Replacement)
-- **TailwindCSS 4**: Utility-first CSS framework for styling with JIT (Just-In-Time) compiler
-- **ShadcnUI**: Unstyled, accessible UI component library built on Radix UI
-- **React Query 5**: Data fetching, caching, state management with automatic background refetching
-- **Zustand 4**: Lightweight state management with a simple API
-- **Lucide Icons**: Beautiful, consistent icon set
-- **PostCSS**: Advanced CSS processing for optimal production builds
+### 🚀 Frontend Architecture
+- **React 19**: Latest React with concurrent features and improved performance
+- **TypeScript 5**: Full type safety with strict configuration
+- **Vite 7**: Lightning-fast build tool with HMR and optimized production builds
+- **React Router 7**: Client-side routing with nested routes and layouts
+- **TailwindCSS 3**: Utility-first CSS with custom design system
+- **Radix UI**: Headless, accessible UI primitives
+- **React Query 5**: Advanced data fetching, caching, and synchronization
+- **Zustand 5**: Lightweight state management for global app state
+- **Lucide React**: Modern icon library with consistent design
 
-### Backend
-- **Supabase**: Backend-as-a-Service platform providing:
-  - **PostgreSQL Database**: For storing file and folder metadata with RLS (Row Level Security)
-  - **Storage**: For storing actual file content with bucket policies
-  - **REST API**: For interacting with the database and storage
-  - **Real-time subscriptions**: For live updates (prepared for future implementation)
-  - **Auth**: Authentication system (prepared for future implementation)
+### 🗄️ Backend & Database
+- **Supabase**: Complete Backend-as-a-Service platform
+  - **PostgreSQL**: Robust relational database with advanced features
+  - **Row Level Security**: Database-level access control
+  - **Storage**: Scalable file storage with CDN
+  - **Auth**: Built-in authentication with JWT tokens
+  - **Real-time**: WebSocket connections for live updates
+  - **REST API**: Auto-generated APIs from database schema
 
-### Development Tools
-- **ESLint**: JavaScript and TypeScript linting
-- **TypeScript**: Static type checking
-- **npm**: Package management
-- **Git**: Version control
+### 🛠️ Development & Deployment
+- **TypeScript ESLint**: Advanced linting with type-aware rules
+- **PostCSS**: CSS processing with autoprefixer
+- **Netlify**: Deployment platform with CI/CD
+- **Git**: Version control with conventional commits
+- **npm**: Package management with lock files
 
-## Project Structure
+## 🏗️ Architecture & Project Structure
+
+### Dual Application Architecture
+The platform consists of two main applications:
+
+1. **User Application**: File management and collaboration
+2. **Admin Application**: System administration and analytics
 
 ```
 src/
-├── components/         # UI components
-│   ├── file-explorer/  # File explorer components
-│   │   ├── FileExplorer.tsx       # Main file explorer component
-│   │   ├── FileItem.tsx           # Individual file item component
-│   │   ├── FolderItem.tsx         # Individual folder item component
-│   │   ├── NewFolderModal.tsx     # Modal for creating new folders
-│   │   ├── RenameFolderModal.tsx  # Modal for renaming folders
-│   │   ├── DeleteFolderModal.tsx  # Modal for deleting folders
-│   │   ├── UploadFileModal.tsx    # Modal for uploading files
-│   │   ├── RenameFileModal.tsx    # Modal for renaming files
-│   │   ├── DeleteFileModal.tsx    # Modal for deleting files
-│   │   ├── FilePreviewModal.tsx   # Modal for previewing files
-│   │   ├── ShareFileModal.tsx     # Modal for sharing files
-│   │   └── SearchBar.tsx          # Search component for filtering
-│   ├── layout/         # Layout components
-│   │   ├── MainLayout.tsx         # Main application layout
-│   │   └── Sidebar.tsx            # Sidebar navigation component
-│   └── ui/             # Reusable UI components
-│       ├── Button.tsx             # Button component
-│       ├── Dialog.tsx             # Dialog/modal component
-│       ├── Input.tsx              # Input component
-│       ├── Label.tsx              # Form label component
-│       └── Toast.tsx              # Toast notification component
-├── hooks/              # Custom React hooks
-│   ├── useFiles.ts              # Hooks for file operations
-│   ├── useFolders.ts            # Hooks for folder operations
-│   ├── useOnClickOutside.ts     # Utility hook for UI interactions
-│   ├── useRenameFile.ts         # Hook for renaming files
-│   ├── useDeleteFile.ts         # Hook for deleting files
-│   ├── useFilePublicUrl.ts      # Hook for getting public file URLs
-│   └── useToast.ts              # Hook for toast notifications
-├── services/           # Service layer
-│   └── supabase/       # Supabase integration
-│       ├── file-service.ts      # File operations service
-│       ├── folder-service.ts    # Folder operations service
-│       └── supabase-client.ts   # Supabase client configuration
-├── types/              # TypeScript type definitions
-│   ├── supabase.ts             # Supabase database types
-│   └── *.d.ts                  # Type declaration files
-├── lib/                # Utility libraries
-│   └── utils/          # Utility functions
-│       └── cn.ts                # Class name utility for Tailwind
-├── contexts/           # React contexts
-│   └── ToastContext.tsx        # Context for toast notifications
-├── App.tsx            # Main application component
-└── main.tsx           # Application entry point
+├── 📁 admin/                    # Admin Dashboard Module
+│   ├── components/              # Admin-specific UI components
+│   │   ├── common/              # Reusable admin components
+│   │   ├── dashboard/           # Dashboard widgets and charts
+│   │   ├── layout/              # Admin layout components
+│   │   └── tables/              # Data tables for management
+│   ├── context/                 # Admin-specific contexts
+│   ├── hooks/                   # Admin data hooks
+│   ├── pages/                   # Admin page components
+│   ├── routes/                  # Admin routing configuration
+│   ├── services/                # Admin data services
+│   ├── types/                   # Admin TypeScript types
+│   └── AdminApp.tsx             # Admin application entry
+│
+├── 📁 components/               # User Application Components
+│   ├── auth/                    # Authentication components
+│   ├── file-explorer/           # File management components
+│   │   ├── FileExplorer.tsx     # Main explorer interface
+│   │   ├── FileItem.tsx         # Individual file display
+│   │   ├── FolderItem.tsx       # Individual folder display
+│   │   ├── ShareToggleButton.tsx # Sharing control component
+│   │   └── modals/              # Operation modals
+│   ├── layout/                  # Application layout
+│   ├── navigation/              # Navigation components
+│   └── ui/                      # Reusable UI primitives
+│
+├── 📁 contexts/                 # Global State Management
+│   ├── AuthContext.tsx          # Authentication state
+│   └── ToastContext.tsx         # Notification system
+│
+├── 📁 hooks/                    # Custom React Hooks
+│   ├── useFiles.ts              # File operations
+│   ├── useFolders.ts            # Folder operations
+│   └── useAuth.ts               # Authentication hooks
+│
+├── 📁 services/                 # Data Access Layer
+│   └── supabase/                # Supabase integration
+│       ├── file-service.ts      # File CRUD operations
+│       ├── folder-service.ts    # Folder CRUD operations
+│       └── supabase-client.ts   # Database client
+│
+├── 📁 routes/                   # Application Routing
+│   └── AppRoutes.tsx            # Main routing configuration
+│
+├── 📁 types/                    # TypeScript Definitions
+│   └── supabase.ts              # Database type definitions
+│
+└── 📁 lib/                      # Utilities & Helpers
+    └── utils.ts                 # Common utility functions
 ```
 
-This structure follows a clean architecture approach with clear separation of concerns:
+### Clean Architecture Principles
+- **Separation of Concerns**: Clear boundaries between UI, business logic, and data
+- **Dependency Inversion**: Services depend on abstractions, not implementations
+- **Single Responsibility**: Each component/service has one clear purpose
+- **Modular Design**: Features are self-contained and easily testable
 
 ## Core Functionality
 
