@@ -277,6 +277,96 @@ export const fileService = {
   },
 
   /**
+   * Mueve un archivo a una carpeta diferente
+   * @param fileId - ID del archivo a mover
+   * @param newFolderId - ID de la carpeta destino (null para raíz)
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async moveFile(fileId: string, newFolderId: string | null, userId: string) {
+    // 1. Validar que la carpeta destino existe y pertenece al usuario
+    if (newFolderId) {
+      const { validateParentFolder } = await import('./storage-path-utils');
+      const isValidDestination = await validateParentFolder(newFolderId, userId);
+      if (!isValidDestination) {
+        throw new Error('Invalid destination folder or folder does not belong to user');
+      }
+    }
+
+    // 2. Obtener información actual del archivo
+    const currentFile = await this.getFileById(fileId, userId);
+    if (!currentFile) {
+      throw new Error('File not found or does not belong to user');
+    }
+
+    // 3. Generar nueva ruta de storage
+    const { generateStoragePath } = await import('./storage-path-utils');
+    const newStoragePath = await generateStoragePath(
+      userId,
+      newFolderId,
+      fileId,
+      currentFile.name
+    );
+
+    // 4. Mover archivo físico en storage
+    const { error: moveError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .move(currentFile.storage_path, newStoragePath);
+
+    if (moveError) {
+      throw new Error(`Failed to move file in storage: ${moveError.message}`);
+    }
+
+    // 5. Actualizar registro en base de datos
+    const { data, error } = await supabase
+      .from('files')
+      .update({
+        folder_id: newFolderId,
+        storage_path: newStoragePath,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', fileId)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      // Revertir movimiento en storage si falla la BD
+      await supabase.storage
+        .from(STORAGE_BUCKET)
+        .move(newStoragePath, currentFile.storage_path);
+      throw error;
+    }
+
+    return data ? { ...data, filename: (data as any).name } : data;
+  },
+
+  /**
+   * Mueve múltiples archivos a una carpeta diferente
+   * @param fileIds - Array de IDs de archivos a mover
+   * @param newFolderId - ID de la carpeta destino (null para raíz)
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async moveMultipleFiles(fileIds: string[], newFolderId: string | null, userId: string) {
+    const results = [];
+    const errors = [];
+
+    for (const fileId of fileIds) {
+      try {
+        const result = await this.moveFile(fileId, newFolderId, userId);
+        results.push(result);
+      } catch (error: any) {
+        errors.push({ fileId, error: error.message });
+      }
+    }
+
+    return { 
+      moved: results, 
+      errors,
+      success: errors.length === 0
+    };
+  },
+
+  /**
    * Cambia el estado de compartición de un archivo
    * @param fileId - ID del archivo
    * @param isShared - Nuevo estado de compartición

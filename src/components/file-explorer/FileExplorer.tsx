@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, FolderPlus, Upload, ChevronRight, Home, Loader2, MoreHorizontal, Search } from 'lucide-react';
+import { FileText, FolderPlus, Upload, ChevronRight, Home, Loader2, Search } from 'lucide-react';
 import { FileItem } from './FileItem';
+import { FolderItem } from './FolderItem';
 import { UploadFileModal } from './UploadFileModal';
 import { NewFolderModal } from './NewFolderModal';
 import { RenameFileModal } from './RenameFileModal';
@@ -9,10 +10,13 @@ import { DeleteFileModal } from './DeleteFileModal';
 import { DeleteFolderModal } from './DeleteFolderModal';
 import { FilePreviewModal } from './FilePreviewModal';
 import { ShareFileModal } from './ShareFileModal';
+import { SelectionToolbar } from '../ui/SelectionToolbar';
 import { Button } from '../ui/Button';
 import { useFilesByFolderId, useFilePublicUrl } from '../../hooks/useFiles';
 import { useFoldersByParentId, useFolderById } from '../../hooks/useFolders';
 import { useToast } from '../../contexts/ToastContext';
+import { SelectionProvider } from '../../contexts/SelectionContext';
+import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import type { File } from '../../services/supabase/file-service';
 import type { Folder } from '../../services/supabase/folder-service';
 
@@ -29,11 +33,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   
   
-  // Estados para drag & drop
+  // Estados para drag & drop de archivos (upload)
   const [isDragging, setIsDragging] = useState(false);
-  const handleDragEnter = () => setIsDragging(true);
-  const handleDragLeave = () => setIsDragging(false);
-  const handleDrop = () => setIsDragging(false);
+  const handleFileDragEnter = () => setIsDragging(true);
+  const handleFileDragLeave = () => setIsDragging(false);
+  const handleFileDrop = () => setIsDragging(false);
   const dropAreaRef = useRef<HTMLDivElement>(null);
   
   // Estados para modales
@@ -115,24 +119,24 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     return matchesSearch && !file.deleted_at; // Solo excluir archivos eliminados
   }) || [];
   
-  // Handlers para drag & drop
+  // Handlers para drag & drop de archivos (upload)
   useEffect(() => {
-    const handleDragOver = (e: DragEvent) => {
+    const handleFileDragOver = (e: DragEvent) => {
       e.preventDefault();
     };
     
     const element = dropAreaRef.current;
     if (element) {
-      element.addEventListener('dragenter', handleDragEnter);
-      element.addEventListener('dragleave', handleDragLeave);
-      element.addEventListener('dragover', handleDragOver);
-      element.addEventListener('drop', handleDrop);
+      element.addEventListener('dragenter', handleFileDragEnter);
+      element.addEventListener('dragleave', handleFileDragLeave);
+      element.addEventListener('dragover', handleFileDragOver);
+      element.addEventListener('drop', handleFileDrop);
       
       return () => {
-        element.removeEventListener('dragenter', handleDragEnter);
-        element.removeEventListener('dragleave', handleDragLeave);
-        element.removeEventListener('dragover', handleDragOver);
-        element.removeEventListener('drop', handleDrop);
+        element.removeEventListener('dragenter', handleFileDragEnter);
+        element.removeEventListener('dragleave', handleFileDragLeave);
+        element.removeEventListener('dragover', handleFileDragOver);
+        element.removeEventListener('drop', handleFileDrop);
       };
     }
   }, [currentFolderId]);
@@ -195,14 +199,44 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setSelectedFile(file);
     setIsShareFileModalOpen(true);
   };
+
+  const handleFolderMove = (folder: Folder) => {
+    // This will be handled by the FolderPicker in the context menu
+    console.log('Move folder:', folder.name);
+  };
+
+  const handleFileMove = (file: File) => {
+    // This will be handled by the FolderPicker in the context menu
+    console.log('Move file:', file.name);
+  };
   
   // Renderizado condicional
   const isLoading = foldersLoading || filesLoading;
   const hasError = foldersError || filesError;
   const isEmpty = !isLoading && !hasError && filteredFolders.length === 0 && filteredFiles.length === 0;
   
+  const { handleDragOver: handleItemDragOver, handleDragLeave: handleItemDragLeave, handleDrop: handleItemDrop, canDropOnTarget, isDragging: isDraggingItems } = useDragAndDrop();
+  
   return (
-    <div className="relative" ref={dropAreaRef}>
+    <SelectionProvider>
+      <div 
+        className="relative" 
+        ref={dropAreaRef}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (canDropOnTarget(currentFolderId)) {
+            handleItemDragOver(e, currentFolderId);
+          }
+        }}
+        onDragLeave={handleItemDragLeave}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (canDropOnTarget(currentFolderId)) {
+            handleItemDrop(e, currentFolderId);
+          }
+        }}
+      >
+        <SelectionToolbar />
       {/* Modern Header with Breadcrumbs */}
       <div className="mb-8">
         {/* Breadcrumbs navigation */}
@@ -284,15 +318,20 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       )}
       
       {/* Área de drop para drag & drop */}
-      {isDragging && (
+      {(isDragging || isDraggingItems) && (
         <div className="absolute inset-0 bg-blue-50 bg-opacity-90 border-2 border-dashed border-blue-400 rounded-lg flex items-center justify-center z-10">
           <div className="text-center p-8 bg-white bg-opacity-80 rounded-lg shadow-sm">
             <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Upload className="h-7 w-7 text-blue-600" />
             </div>
-            <h3 className="text-base font-medium text-slate-900 mb-2">Drop files here</h3>
+            <h3 className="text-base font-medium text-slate-900 mb-2">
+              {isDraggingItems ? 'Move items here' : 'Drop files here'}
+            </h3>
             <p className="text-slate-600 text-sm">
-              Drop your files to upload them to this folder
+              {isDraggingItems 
+                ? 'Drop to move the selected items to this folder'
+                : 'Drop your files to upload them to this folder'
+              }
             </p>
           </div>
         </div>
@@ -347,54 +386,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                 
                 {/* Carpetas */}
                 {filteredFolders.map((folder) => (
-                  <div 
+                  <FolderItem
                     key={folder.id}
+                    folder={folder}
                     onClick={() => handleFolderClick(folder)}
-                    className="grid grid-cols-12 items-center px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer group"
-                  >
-                    <div className="col-span-6 flex items-center gap-3">
-                      <div className="p-1 bg-blue-50 rounded-md">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M22 19C22 19.5304 21.7893 20.0391 21.4142 20.4142C21.0391 20.7893 20.5304 21 20 21H4C3.46957 21 2.96086 20.7893 2.58579 20.4142C2.21071 20.0391 2 19.5304 2 19V5C2 4.46957 2.21071 3.96086 2.58579 3.58579C2.96086 3.21071 3.46957 3 4 3H9L11 6H20C20.5304 6 21.0391 6.21071 21.4142 6.58579C21.7893 6.96086 22 7.46957 22 8V19Z" fill="#3B82F6" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                      <div className="overflow-hidden">
-                        <h3 className="font-medium text-slate-900 truncate">{folder.name}</h3>
-                      </div>
-                    </div>
-                    <div className="col-span-2 text-sm text-slate-500">
-                      {new Date(folder.created_at).toLocaleDateString()}
-                    </div>
-                    <div className="col-span-2 text-sm text-slate-500">
-                      Folder
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <button 
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-100 transition"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFolderRename(folder);
-                        }}
-                        aria-label="Folder options"
-                      >
-                        <MoreHorizontal className="h-4 w-4 text-slate-500" />
-                      </button>
-                      <button 
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-100 transition ml-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFolderDelete(folder);
-                        }}
-                        aria-label="Delete folder"
-                      >
-                        <svg className="h-4 w-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 6h18"></path>
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                    onRename={() => handleFolderRename(folder)}
+                    onDelete={() => handleFolderDelete(folder)}
+                    onMove={() => handleFolderMove(folder)}
+                  />
                 ))}
               </div>
             </div>
@@ -423,6 +422,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                     onDelete={() => handleFileDelete(file)}
                     onDownload={() => handleFileDownload(file)}
                     onShare={() => handleShareFile(file)}
+                    onMove={() => handleFileMove(file)}
                   />
                 ))}
               </div>
@@ -509,6 +509,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
           }}
         />
       )}
-    </div>
+      </div>
+    </SelectionProvider>
   );
 }

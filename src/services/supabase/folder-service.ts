@@ -290,6 +290,163 @@ export const folderService = {
   },
 
   /**
+   * Mueve una carpeta a una carpeta padre diferente
+   * @param folderId - ID de la carpeta a mover
+   * @param newParentId - ID de la carpeta padre destino (null para raíz)
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async moveFolder(folderId: string, newParentId: string | null, userId: string) {
+    // 1. Validar que no se esté moviendo a sí misma o a una subcarpeta suya
+    if (folderId === newParentId) {
+      throw new Error('Cannot move folder to itself');
+    }
+
+    // 2. Validar que la carpeta destino existe y pertenece al usuario
+    if (newParentId) {
+      const isValidDestination = await validateParentFolder(newParentId, userId);
+      if (!isValidDestination) {
+        throw new Error('Invalid destination folder or folder does not belong to user');
+      }
+
+      // 3. Verificar que no se esté creando un ciclo (mover a una subcarpeta propia)
+      const isDescendant = await this.isDescendantFolder(newParentId, folderId);
+      if (isDescendant) {
+        throw new Error('Cannot move folder to its own descendant');
+      }
+    }
+
+    // 4. Obtener información actual de la carpeta
+    const currentFolder = await this.getFolderById(folderId, userId);
+    if (!currentFolder) {
+      throw new Error('Folder not found or does not belong to user');
+    }
+
+    // 5. Actualizar registro en base de datos
+    const { data, error } = await supabase
+      .from('folders')
+      .update({
+        parent_id: newParentId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', folderId)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // 6. Actualizar storage paths de todos los archivos en esta carpeta y subcarpetas
+    await this.updateStoragePathsRecursively(folderId, userId);
+
+    return data;
+  },
+
+  /**
+   * Verifica si una carpeta es descendiente de otra
+   * @param potentialDescendantId - ID de la posible carpeta descendiente
+   * @param ancestorId - ID de la carpeta ancestro
+   */
+  async isDescendantFolder(potentialDescendantId: string, ancestorId: string): Promise<boolean> {
+    let currentId = potentialDescendantId;
+    const visited = new Set<string>();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      
+      const { data: folder } = await supabase
+        .from('folders')
+        .select('parent_id')
+        .eq('id', currentId)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (!folder || !folder.parent_id) break;
+      
+      if (folder.parent_id === ancestorId) {
+        return true;
+      }
+      
+      currentId = folder.parent_id;
+    }
+
+    return false;
+  },
+
+  /**
+   * Actualiza recursivamente los storage paths de archivos en una carpeta movida
+   * @param folderId - ID de la carpeta movida
+   * @param userId - ID del usuario
+   */
+  async updateStoragePathsRecursively(folderId: string, userId: string) {
+    const { generateStoragePath } = await import('./storage-path-utils');
+    
+    // Obtener todos los archivos en esta carpeta
+    const { data: files } = await supabase
+      .from('files')
+      .select('id, name, folder_id')
+      .eq('folder_id', folderId)
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    // Actualizar storage path de cada archivo
+    if (files) {
+      for (const file of files) {
+        const newStoragePath = await generateStoragePath(
+          userId,
+          file.folder_id,
+          file.id,
+          file.name
+        );
+
+        await supabase
+          .from('files')
+          .update({ storage_path: newStoragePath })
+          .eq('id', file.id);
+      }
+    }
+
+    // Obtener subcarpetas y actualizar recursivamente
+    const { data: subfolders } = await supabase
+      .from('folders')
+      .select('id')
+      .eq('parent_id', folderId)
+      .eq('user_id', userId)
+      .is('deleted_at', null);
+
+    if (subfolders) {
+      for (const subfolder of subfolders) {
+        await this.updateStoragePathsRecursively(subfolder.id, userId);
+      }
+    }
+  },
+
+  /**
+   * Mueve múltiples carpetas a una carpeta padre diferente
+   * @param folderIds - Array de IDs de carpetas a mover
+   * @param newParentId - ID de la carpeta padre destino (null para raíz)
+   * @param userId - ID del usuario (debe ser el owner)
+   */
+  async moveMultipleFolders(folderIds: string[], newParentId: string | null, userId: string) {
+    const results = [];
+    const errors = [];
+
+    for (const folderId of folderIds) {
+      try {
+        const result = await this.moveFolder(folderId, newParentId, userId);
+        results.push(result);
+      } catch (error: any) {
+        errors.push({ folderId, error: error.message });
+      }
+    }
+
+    return { 
+      moved: results, 
+      errors,
+      success: errors.length === 0
+    };
+  },
+
+  /**
    * Cambia el estado de compartición de una carpeta
    * @param folderId - ID de la carpeta
    * @param isShared - Nuevo estado de compartición

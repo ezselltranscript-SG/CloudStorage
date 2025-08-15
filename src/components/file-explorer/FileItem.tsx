@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { MoreHorizontal, Download, Trash2, ExternalLink, Share2, Pencil } from 'lucide-react';
+import { MoreHorizontal, Download, Trash2, ExternalLink, Share2, Pencil, Move } from 'lucide-react';
 import { formatFileSize, getFileIcon } from '../../types/file';
 import { ShareToggleButton } from './ShareToggleButton';
+import { useSelection } from '../../contexts/SelectionContext';
+import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useAuth } from '../../contexts/AuthContext';
-import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { cn } from '../../lib/utils/cn';
 
 interface FileItemProps {
   file: {
@@ -23,6 +25,8 @@ interface FileItemProps {
   onDownload?: (file: any) => void;
   onPreview?: (file: any) => void;
   onShare?: (file: any) => void;
+  onMove?: (file: any) => void;
+  className?: string;
 }
 
 export const FileItem: React.FC<FileItemProps> = ({
@@ -32,17 +36,24 @@ export const FileItem: React.FC<FileItemProps> = ({
   onDownload,
   onPreview,
   onShare,
+  onMove,
+  className,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { isSelected, toggleSelection } = useSelection();
+  const { handleDragStart, handleDragEnd, draggedItems } = useDragAndDrop();
+  const isBeingDragged = draggedItems.some(item => item.id === file.id);
+  
+  const FileIconComponent = getFileIcon(file.mimetype);
 
-  useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setIsMenuOpen(false));
-
-  const FileIconComponent = getFileIcon(file.name);
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  const handleCheckboxChange = () => {
+    toggleSelection({
+      id: file.id,
+      type: 'file',
+      name: file.name
+    });
   };
 
   const closeMenu = () => {
@@ -50,11 +61,36 @@ export const FileItem: React.FC<FileItemProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-12 items-center px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
-      {/* Nombre e icono */}
+    <div
+      className={cn(
+        "group grid grid-cols-12 items-center px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer relative",
+        isMenuOpen ? 'ring-1 ring-blue-300 z-10 bg-blue-50' : '',
+        isSelected(file.id) ? 'bg-blue-50 border-blue-200' : '',
+        isBeingDragged ? 'opacity-50' : '',
+        className
+      )}
+      onClick={onPreview}
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation();
+        handleDragStart({
+          id: file.id,
+          type: 'file',
+          name: file.name
+        });
+      }}
+      onDragEnd={handleDragEnd}
+    >
+      {/* Checkbox y nombre e icono */}
       <div className="col-span-6 flex items-center gap-3 min-w-0">
+        <input
+          type="checkbox"
+          checked={isSelected(file.id)}
+          onChange={handleCheckboxChange}
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+        />
         <div className="flex-shrink-0 p-1.5 bg-slate-100 rounded">
-          {FileIconComponent && <FileIconComponent className="h-4 w-4 text-slate-500" />}
+          <FileIconComponent className="h-4 w-4 text-slate-500" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -110,7 +146,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         
         <div className="relative">
           <button
-            onClick={toggleMenu}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-1.5 rounded-md hover:bg-slate-200 transition-colors group"
             title="More options"
           >
@@ -124,6 +160,17 @@ export const FileItem: React.FC<FileItemProps> = ({
               className="fixed right-4 mt-1 w-44 rounded-md shadow-lg bg-white ring-1 ring-slate-200 z-[9999] py-1"
               style={{ top: menuRef.current ? `${menuRef.current.getBoundingClientRect().bottom + window.scrollY + 5}px` : 'auto' }}
             >
+              <button
+                onClick={() => {
+                  onMove && onMove(file);
+                  closeMenu();
+                }}
+                className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                <Move className="h-3.5 w-3.5 mr-2 text-slate-500" />
+                Move to...
+              </button>
+              
               <button
                 onClick={() => {
                   onShare && onShare(file);
