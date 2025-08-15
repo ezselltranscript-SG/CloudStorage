@@ -74,7 +74,7 @@ export async function validateParentFolder(
 
   const { data: folder, error } = await supabase
     .from('folders')
-    .select('id, user_id, deleted_at')
+    .select('id, user_id, deleted_at, name, is_shared')
     .eq('id', parentId)
     .maybeSingle();
 
@@ -95,10 +95,26 @@ export async function validateParentFolder(
     return false;
   }
 
-  if (folder.user_id !== userId) {
-    console.log('Folder does not belong to user:', { folderUserId: folder.user_id, currentUserId: userId });
+  // Permitir carpetas que pertenecen al usuario O que están compartidas
+  const isOwner = folder.user_id === userId;
+  const isShared = folder.is_shared === true;
+  
+  if (!isOwner && !isShared) {
+    console.log('Folder does not belong to user and is not shared:', { 
+      folderUserId: folder.user_id, 
+      currentUserId: userId,
+      folderId: parentId,
+      folderName: folder.name || 'unknown',
+      isShared: folder.is_shared
+    });
     return false;
   }
+  
+  console.log('Folder access granted:', { 
+    isOwner, 
+    isShared, 
+    folderName: folder.name || 'unknown' 
+  });
 
   console.log('Validation passed');
   return true;
