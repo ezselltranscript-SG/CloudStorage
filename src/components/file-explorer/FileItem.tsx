@@ -157,8 +157,7 @@ export const FileItem: React.FC<FileItemProps> = ({
           {isMenuOpen && (
             <div 
               ref={menuRef}
-              className="fixed right-4 mt-1 w-44 rounded-md shadow-lg bg-white ring-1 ring-slate-200 z-[9999] py-1"
-              style={{ top: menuRef.current ? `${menuRef.current.getBoundingClientRect().bottom + window.scrollY + 5}px` : 'auto' }}
+              className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 z-[100] py-1"
             >
               <button
                 onClick={() => {
