@@ -22,7 +22,7 @@ export const DeleteFileModal: React.FC<DeleteFileModalProps> = ({
   const handleDelete = async () => {
     try {
       await deleteFile(file);
-      showSuccess(`File "${file.filename}" deleted successfully`);
+      showSuccess(`File "${file.name}" deleted successfully`);
       onClose();
     } catch (error) {
       console.error('Error deleting file:', error);
@@ -35,10 +35,7 @@ export const DeleteFileModal: React.FC<DeleteFileModalProps> = ({
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
         <h2 className="text-xl font-semibold mb-4">Delete File</h2>
         
-        <p className="mb-4 text-gray-700">
-          Are you sure you want to delete the file <span className="font-medium">{file.filename}</span>?
-          This action cannot be undone.
-        </p>
+        <p className="text-sm text-gray-600 mb-4">Are you sure you want to delete <strong>{file.name}</strong>?</p>
         
         <div className="flex justify-end gap-2">
           <Button 

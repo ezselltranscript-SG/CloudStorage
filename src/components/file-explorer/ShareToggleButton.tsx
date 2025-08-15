@@ -26,7 +26,7 @@ export const ShareToggleButton: React.FC<ShareToggleButtonProps> = ({
   const toggleFolderSharing = useToggleFolderSharing();
 
   const isOwner = currentUserId === item.user_id;
-  const itemName = item.name || item.filename || 'Unknown';
+  const itemName = item.name || 'Unknown';
 
   const handleToggleSharing = async () => {
     if (!isOwner) {

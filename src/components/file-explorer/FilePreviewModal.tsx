@@ -30,7 +30,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
   if (!isOpen || !file || !publicUrl) return null;
 
-  const fileExt = file.filename.split('.').pop()?.toLowerCase();
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
   const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt || '');
   const isPdf = fileExt === 'pdf';
   const isPreviewable = isImage || isPdf;
@@ -48,7 +48,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     if (publicUrl) {
       const link = document.createElement('a');
       link.href = publicUrl;
-      link.download = file.filename;
+      link.download = file.name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -60,7 +60,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-lg font-medium">{file.filename}</h3>
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">{file.name}</h2>
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
@@ -125,7 +125,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             isImage ? (
               <img 
                 src={publicUrl} 
-                alt={file.filename} 
+                alt={file.name} 
                 className="max-w-full max-h-full object-contain"
                 onLoad={handleImageLoad}
                 onError={handleImageError}
@@ -135,7 +135,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               <iframe 
                 src={`${publicUrl}#toolbar=0`} 
                 className="w-full h-full border-0"
-                title={file.filename}
+                title={file.name}
                 onLoad={handleImageLoad}
                 onError={handleImageError}
                 style={{ display: isLoading ? 'none' : 'block' }}

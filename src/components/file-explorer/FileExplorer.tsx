@@ -177,7 +177,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         // Creamos un enlace temporal para la descarga
         const link = document.createElement('a');
         link.href = publicUrl;
-        link.download = file.filename;
+        link.download = file.name;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

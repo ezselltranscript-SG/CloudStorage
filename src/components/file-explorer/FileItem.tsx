@@ -8,15 +8,15 @@ import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 interface FileItemProps {
   file: {
     id: string;
-    filename: string;
+    name: string;
     folder_id: string;
     storage_path: string;
     size: number;
     mimetype: string;
     created_at: string;
-    updated_at: string;
     user_id: string;
     is_shared: boolean;
+    deleted_at: string | null;
   };
   onRename?: (file: any) => void;
   onDelete?: (file: any) => void;
@@ -39,7 +39,7 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setIsMenuOpen(false));
 
-  const FileIconComponent = getFileIcon(file.filename);
+  const FileIconComponent = getFileIcon(file.name);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -58,7 +58,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className="font-medium text-slate-800 truncate">{file.filename}</div>
+            <span className="text-sm font-medium text-slate-900 truncate">{file.name}</span>
             {file.is_shared && file.user_id !== user?.id && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                 Shared
@@ -71,7 +71,7 @@ export const FileItem: React.FC<FileItemProps> = ({
       
       {/* Fecha de modificación */}
       <div className="col-span-2 text-xs text-slate-500">
-        {new Date(file.updated_at || file.created_at).toLocaleDateString()}
+        {new Date(file.created_at).toLocaleDateString()}
       </div>
       
       {/* Tamaño de archivo */}
@@ -86,7 +86,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             id: file.id, 
             is_shared: file.is_shared, 
             user_id: file.user_id,
-            filename: file.filename
+            name: file.name
           }}
           type="file"
           currentUserId={user?.id}

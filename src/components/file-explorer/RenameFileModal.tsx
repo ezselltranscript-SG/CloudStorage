@@ -25,20 +25,20 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
   file,
   onClose
 }) => {
-  const [newName, setNewName] = useState(file.filename);
+  const [newName, setNewName] = useState(file.name);
   const [showExtensionWarning, setShowExtensionWarning] = useState(false);
   const { mutateAsync: renameFile, isPending } = useRenameFile();
   const { showSuccess, showError } = useToast();
 
-  const originalExtension = getFileExtension(file.filename);
+  const originalExtension = getFileExtension(file.name);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setNewName(file.filename);
+      setNewName(file.name);
       setShowExtensionWarning(false);
     }
-  }, [isOpen, file.filename]);
+  }, [isOpen, file.name]);
 
   // Check for extension changes
   useEffect(() => {
@@ -102,7 +102,7 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
   };
 
   const isNameEmpty = !newName.trim();
-  const isNameUnchanged = newName.trim() === file.filename;
+  const isNameUnchanged = newName.trim() === file.name;
   const isSubmitDisabled = isPending || isNameEmpty || isNameUnchanged;
 
   return (
@@ -111,7 +111,7 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
         className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold mb-4">Rename File</h2>
+        <p className="text-sm text-gray-600 mb-4">Renaming file: <strong>{file.name}</strong></p>
         
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-4">
@@ -148,7 +148,7 @@ export const RenameFileModal: React.FC<RenameFileModalProps> = ({
             )}
             
             {/* Empty name warning */}
-            {isNameEmpty && newName !== file.filename && (
+            {isNameEmpty && newName !== file.name && (
               <div className="mt-2 text-sm text-red-600">
                 File name cannot be empty
               </div>
