@@ -31,14 +31,19 @@ export const AppRoutes: React.FC = () => {
       {/* Admin routes */}
       <Route path="/admin/*" element={<AdminApp />} />
       
-      {/* Main app routes */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<FileExplorerPage />} />
-        <Route path="folder/:folderId" element={<FileExplorerPage />} />
-        <Route path="shared" element={<SharedFilesPage />} />
-        <Route path="trash" element={<TrashPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
+      {/* Protected routes - require authentication */}
+      {user ? (
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<FileExplorerPage />} />
+          <Route path="folder/:folderId" element={<FileExplorerPage />} />
+          <Route path="shared" element={<SharedFilesPage />} />
+          <Route path="trash" element={<TrashPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      ) : (
+        /* Redirect unauthenticated users to login */
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      )}
     </Routes>
   );
 };

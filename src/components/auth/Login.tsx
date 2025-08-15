@@ -11,7 +11,7 @@ export const Login: React.FC = () => {
   
   useEffect(() => {
     if (user) {
-      navigate('/files');
+      navigate('/');
     }
   }, [user, navigate]);
 
@@ -19,7 +19,7 @@ export const Login: React.FC = () => {
     e.preventDefault();
     const success = await signIn(email, password);
     if (success) {
-      navigate('/files');
+      navigate('/');
     }
   };
 
