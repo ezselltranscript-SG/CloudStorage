@@ -1,6 +1,6 @@
 import { supabase } from './supabase-client';
 import type { Database } from '../../types/supabase';
-// Eliminamos la importación no utilizada
+import { validateParentFolder } from './storage-path-utils';
 
 export type Folder = Database['public']['Tables']['folders']['Row'];
 export type FolderInsert = Database['public']['Tables']['folders']['Insert'];
@@ -103,16 +103,13 @@ export const folderService = {
     if (!userId) throw new Error('Missing userId for folder creation');
 
     const baseName = (folder as any).name as string;
-    // Validar parent_id: si viene, debe existir y pertenecer al usuario; si no, lo forzamos a null
+    // Validar parent_id: debe existir y pertenecer al usuario
     let normalizedParentId: string | null = (folder as any).parent_id ?? null;
+    
     if (normalizedParentId) {
-      const { data: parentRow, error: parentErr } = await supabase
-        .from('folders')
-        .select('id, user_id')
-        .eq('id', normalizedParentId)
-        .maybeSingle();
-      if (parentErr || !parentRow || parentRow.user_id !== userId) {
-        normalizedParentId = null;
+      const isValidParent = await validateParentFolder(normalizedParentId, userId);
+      if (!isValidParent) {
+        throw new Error('Invalid parent folder or folder does not belong to user');
       }
     }
     let attempt = 0;

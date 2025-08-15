@@ -1,6 +1,6 @@
 import { supabase, STORAGE_BUCKET } from './supabase-client';
 import type { Database } from '../../types/supabase';
-// Eliminamos la importación no utilizada
+import { generateStoragePath, validateParentFolder } from './storage-path-utils';
 
 export type File = Database['public']['Tables']['files']['Row'];
 export type FileInsert = Database['public']['Tables']['files']['Insert'];
@@ -75,15 +75,21 @@ export const fileService = {
    * @param userId - ID del usuario autenticado
    */
   async uploadFile(file: { id: string; filename: string; folder_id: string | null; storage_path?: string; created_at?: string; is_shared?: boolean }, fileBlob: Blob, userId?: string) {
-    // 1. Subir el archivo al Storage
+    // 1. Validar entrada
     if (!userId) {
       throw new Error('Missing userId for upload');
     }
-    const fileExt = file.filename.split('.').pop();
-    // Guardamos bajo prefijo del usuario para cumplir RLS de Storage (userId/...)
-    // Si folder_id es null, usar "root" como carpeta
-    const folderPath = file.folder_id || 'root';
-    const filePath = `${userId}/${folderPath}/${file.id}.${fileExt}`;
+
+    // 2. Validar que la carpeta padre existe y pertenece al usuario
+    if (file.folder_id) {
+      const isValidParent = await validateParentFolder(file.folder_id, userId);
+      if (!isValidParent) {
+        throw new Error('Invalid parent folder or folder does not belong to user');
+      }
+    }
+
+    // 3. Generar storage path correcto basado en jerarquía real
+    const filePath = await generateStoragePath(userId, file.folder_id, file.id, file.filename);
     
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
@@ -91,7 +97,7 @@ export const fileService = {
     
     if (uploadError) throw uploadError;
 
-    // 2. Crear el registro en la base de datos
+    // 4. Crear el registro en la base de datos
     const fileData: FileInsert = {
       name: file.filename,
       folder_id: file.folder_id,
