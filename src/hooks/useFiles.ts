@@ -48,7 +48,10 @@ export const useUploadFile = () => {
     onSuccess: (newFile) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
-        queryKey: ['files', 'folder', newFile.folder_id, user?.id] 
+        queryKey: ['files', newFile.folder_id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
       });
     },
   });
@@ -67,10 +70,13 @@ export const useUpdateFile = () => {
     onSuccess: (updatedFile) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
-        queryKey: ['files', 'folder', updatedFile.folder_id, user?.id] 
+        queryKey: ['files', updatedFile.folder_id] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['files', updatedFile.id, user?.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
       });
     },
   });
@@ -88,7 +94,10 @@ export const useDeleteFile = () => {
     onSuccess: (_, file) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
-        queryKey: ['files', 'folder', file.folder_id, user?.id] 
+        queryKey: ['files', file.folder_id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
       });
       // También invalidar la consulta de trash para que aparezca allí
       queryClient.invalidateQueries({ 
@@ -123,10 +132,13 @@ export const useRenameFile = () => {
     onSuccess: (updatedFile) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
-        queryKey: ['files', 'folder', updatedFile.folder_id, user?.id] 
+        queryKey: ['files', updatedFile.folder_id] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['files', updatedFile.id, user?.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
       });
     },
   });
@@ -145,10 +157,13 @@ export const useToggleFileSharing = () => {
     onSuccess: (updatedFile) => {
       // Invalidar consultas para actualizar la UI
       queryClient.invalidateQueries({ 
-        queryKey: ['files', 'folder', updatedFile?.folder_id, user?.id] 
+        queryKey: ['files', updatedFile?.folder_id] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['files', updatedFile?.id, user?.id] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
       });
     },
   });

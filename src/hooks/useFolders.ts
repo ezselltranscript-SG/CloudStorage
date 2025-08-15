@@ -59,9 +59,9 @@ export const useCreateFolder = () => {
     mutationFn: (folder: FolderInsert) => folderService.createFolder(folder, user?.id),
     onSuccess: (newFolder) => {
       // Invalidar consultas para actualizar la UI
-      queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ 
-        queryKey: ['folders', 'parent', newFolder.parent_id, user?.id] 
+        queryKey: ['folders', 'parent', newFolder.parent_id] 
       });
     },
   });
@@ -79,9 +79,9 @@ export const useUpdateFolder = () => {
       folderService.updateFolder(id, folder, user?.id),
     onSuccess: (updatedFolder) => {
       // Invalidar consultas para actualizar la UI
-      queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ 
-        queryKey: ['folders', 'parent', updatedFolder.parent_id, user?.id] 
+        queryKey: ['folders', 'parent', updatedFolder.parent_id] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['folders', updatedFolder.id, user?.id] 
@@ -101,9 +101,9 @@ export const useDeleteFolder = () => {
     mutationFn: (folder: Folder) => folderService.moveToTrash(folder.id, user?.id),
     onSuccess: (_, folder) => {
       // Invalidar consultas para actualizar la UI
-      queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ 
-        queryKey: ['folders', 'parent', folder.parent_id, user?.id] 
+        queryKey: ['folders', 'parent', folder.parent_id] 
       });
       // También invalidar la consulta de trash para que aparezca allí
       queryClient.invalidateQueries({ 
@@ -125,9 +125,9 @@ export const useToggleFolderSharing = () => {
       folderService.toggleFolderSharing(folderId, isShared, user?.id!),
     onSuccess: (updatedFolder) => {
       // Invalidar consultas para actualizar la UI
-      queryClient.invalidateQueries({ queryKey: ['folders', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
       queryClient.invalidateQueries({ 
-        queryKey: ['folders', 'parent', updatedFolder?.parent_id, user?.id] 
+        queryKey: ['folders', 'parent', updatedFolder?.parent_id] 
       });
       queryClient.invalidateQueries({ 
         queryKey: ['folders', updatedFolder?.id, user?.id] 
