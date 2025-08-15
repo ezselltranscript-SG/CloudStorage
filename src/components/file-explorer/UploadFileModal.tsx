@@ -55,12 +55,6 @@ export const UploadFileModal: React.FC<UploadFileModalProps> = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!currentFolderId) {
-      setError('No folder selected to upload files');
-      showError('Folder Error', 'No folder selected to upload files');
-      return;
-    }
-    
     if (selectedFiles.length === 0) {
       setError('Please select at least one file');
       showError('No Files', 'Please select at least one file to upload');

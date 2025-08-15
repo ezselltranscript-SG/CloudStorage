@@ -42,7 +42,7 @@ export const useUploadFile = () => {
   
   return useMutation({
     mutationFn: ({ file, fileData }: { 
-      file: { id: string; filename: string; folder_id: string; storage_path?: string; created_at?: string; is_shared?: boolean }; 
+      file: { id: string; filename: string; folder_id: string | null; storage_path?: string; created_at?: string; is_shared?: boolean }; 
       fileData: Blob 
     }) => fileService.uploadFile(file, fileData, user?.id),
     onSuccess: (newFile) => {
