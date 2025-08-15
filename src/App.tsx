@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { SelectionProvider } from './contexts/SelectionContext';
 import { AppRoutes } from './routes/AppRoutes';
 import './index.css';
 
@@ -20,9 +21,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <AuthProvider>
-          <Router basename="/">
-            <AppRoutes />
-          </Router>
+          <SelectionProvider>
+            <Router basename="/">
+              <AppRoutes />
+            </Router>
+          </SelectionProvider>
         </AuthProvider>
       </ToastProvider>
     </QueryClientProvider>

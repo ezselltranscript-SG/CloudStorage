@@ -15,7 +15,6 @@ import { Button } from '../ui/Button';
 import { useFilesByFolderId, useFilePublicUrl } from '../../hooks/useFiles';
 import { useFoldersByParentId, useFolderById } from '../../hooks/useFolders';
 import { useToast } from '../../contexts/ToastContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import type { File } from '../../services/supabase/file-service';
 import type { Folder } from '../../services/supabase/folder-service';
@@ -218,7 +217,6 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   const { handleDragOver: handleItemDragOver, handleDragLeave: handleItemDragLeave, handleDrop: handleItemDrop, canDropOnTarget, isDragging: isDraggingItems } = useDragAndDrop();
   
   return (
-    <SelectionProvider>
       <div 
         className="relative" 
         ref={dropAreaRef}
@@ -510,6 +508,5 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         />
       )}
       </div>
-    </SelectionProvider>
   );
 }
