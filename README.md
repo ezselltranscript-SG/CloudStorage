@@ -115,27 +115,32 @@ src/
 │   ├── auth/                    # Authentication components
 │   ├── file-explorer/           # File management components
 │   │   ├── FileExplorer.tsx     # Main explorer interface
-│   │   ├── FileItem.tsx         # Individual file display
-│   │   ├── FolderItem.tsx       # Individual folder display
+│   │   ├── FileItem.tsx         # Individual file display with drag/drop
+│   │   ├── FolderItem.tsx       # Individual folder display with drag/drop
 │   │   ├── ShareToggleButton.tsx # Sharing control component
 │   │   └── modals/              # Operation modals
 │   ├── layout/                  # Application layout
 │   ├── navigation/              # Navigation components
 │   └── ui/                      # Reusable UI primitives
+│       ├── SelectionToolbar.tsx # Bulk operations toolbar
+│       └── FolderPicker.tsx     # Folder destination picker
 │
 ├── 📁 contexts/                 # Global State Management
 │   ├── AuthContext.tsx          # Authentication state
+│   ├── SelectionContext.tsx     # Multi-select state management
 │   └── ToastContext.tsx         # Notification system
 │
 ├── 📁 hooks/                    # Custom React Hooks
 │   ├── useFiles.ts              # File operations
 │   ├── useFolders.ts            # Folder operations
+│   ├── useMove.ts               # File/folder move operations
+│   ├── useDragAndDrop.ts        # Drag & drop functionality
 │   └── useAuth.ts               # Authentication hooks
 │
 ├── 📁 services/                 # Data Access Layer
 │   └── supabase/                # Supabase integration
-│       ├── file-service.ts      # File CRUD operations
-│       ├── folder-service.ts    # Folder CRUD operations
+│       ├── file-service.ts      # File CRUD + move operations
+│       ├── folder-service.ts    # Folder CRUD + move operations
 │       └── supabase-client.ts   # Database client
 │
 ├── 📁 routes/                   # Application Routing
@@ -167,7 +172,11 @@ export interface Folder {
   id: string;
   name: string;
   parent_id: string | null;
+  user_id: string;
+  is_shared: boolean;
   created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 ```
 
@@ -177,16 +186,24 @@ export interface Folder {
 - `createFolder(folder)`: Creates a new folder
 - `updateFolder(id, folder)`: Updates an existing folder
 - `deleteFolder(id)`: Deletes a folder
+- `moveFolder(id, newParentId)`: Moves folder to new location
+- `moveMultipleFolders(items, destinationId)`: Bulk move operations
 
 #### File Service (`file-service.ts`)
 
 ```typescript
 export interface File {
   id: string;
-  filename: string;
+  name: string;
   folder_id: string;
   storage_path?: string;
+  size: number;
+  mimetype: string;
+  user_id: string;
+  is_shared: boolean;
   created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
 }
 ```
 
@@ -197,6 +214,8 @@ export interface File {
 - `getFilePublicUrl(storagePath)`: Gets a public URL for a file
 - `getFilePreviewUrl(storagePath)`: Gets a preview URL for supported file types
 - `shareFile(id, isPublic)`: Toggles public sharing for a file
+- `moveFile(id, newFolderId)`: Moves file to new folder
+- `moveMultipleFiles(items, destinationId)`: Bulk move operations
 
 ### Custom Hooks Layer
 
@@ -251,47 +270,106 @@ The application requires the following tables in your Supabase database:
 - `id`: UUID (primary key)
 - `name`: String (folder name)
 - `parent_id`: UUID or null (foreign key to folders.id, null for root folders)
+- `user_id`: UUID (references auth.users.id)
+- `is_shared`: Boolean, default: false (for workspace sharing)
+- `original_parent_id`: UUID or null (for trash/restore functionality)
+- `deleted_at`: Timestamp with time zone or null (soft delete)
 - `created_at`: Timestamp with time zone, default: now()
-- `user_id`: UUID (prepared for future authentication implementation)
+- `updated_at`: Timestamp with time zone, default: now()
 
 #### files
 - `id`: UUID (primary key)
-- `filename`: String (file name)
+- `name`: String (file name, renamed from filename)
 - `folder_id`: UUID (foreign key to folders.id)
 - `storage_path`: String (path in Supabase storage)
+- `user_id`: UUID (references auth.users.id)
+- `size`: Integer (file size in bytes)
+- `mimetype`: String (MIME type for file identification)
+- `type`: String (legacy field, use mimetype instead)
+- `is_shared`: Boolean, default: false (for workspace sharing)
+- `deleted_at`: Timestamp with time zone or null (soft delete)
 - `created_at`: Timestamp with time zone, default: now()
-- `user_id`: UUID (prepared for future authentication implementation)
-- `is_public`: Boolean, default: false (for public sharing)
-- `mime_type`: String (optional, for file type identification)
-- `size`: Integer (optional, for file size in bytes)
+- `updated_at`: Timestamp with time zone, default: now()
+- `url`: String (optional, for direct file URLs)
+- `thumbnail_url`: String (optional, for file thumbnails)
 
 ### SQL Setup Script
 
 ```sql
--- Create tables
+-- Create tables with complete schema
 CREATE TABLE folders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   parent_id UUID REFERENCES folders(id),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  is_shared BOOLEAN DEFAULT FALSE,
+  original_parent_id UUID REFERENCES folders(id),
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  user_id UUID
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE files (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  filename TEXT NOT NULL,
+  name TEXT NOT NULL,
   folder_id UUID REFERENCES folders(id) NOT NULL,
   storage_path TEXT,
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  size INTEGER NOT NULL,
+  mimetype TEXT NOT NULL,
+  type TEXT, -- Legacy field
+  is_shared BOOLEAN DEFAULT FALSE,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  user_id UUID,
-  is_public BOOLEAN DEFAULT FALSE,
-  mime_type TEXT,
-  size INTEGER
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  url TEXT,
+  thumbnail_url TEXT
 );
 
 -- Create indexes for performance
 CREATE INDEX folders_parent_id_idx ON folders(parent_id);
+CREATE INDEX folders_user_id_idx ON folders(user_id);
+CREATE INDEX folders_deleted_at_idx ON folders(deleted_at);
 CREATE INDEX files_folder_id_idx ON files(folder_id);
+CREATE INDEX files_user_id_idx ON files(user_id);
+CREATE INDEX files_deleted_at_idx ON files(deleted_at);
+CREATE INDEX files_mimetype_idx ON files(mimetype);
+
+-- Enable Row Level Security
+ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for folders
+CREATE POLICY "Users can view their own folders and shared folders" ON folders
+  FOR SELECT USING (
+    user_id = auth.uid() OR 
+    is_shared = true
+  );
+
+CREATE POLICY "Users can insert their own folders" ON folders
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own folders" ON folders
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own folders" ON folders
+  FOR DELETE USING (user_id = auth.uid());
+
+-- RLS Policies for files
+CREATE POLICY "Users can view their own files and shared files" ON files
+  FOR SELECT USING (
+    user_id = auth.uid() OR 
+    is_shared = true
+  );
+
+CREATE POLICY "Users can insert their own files" ON files
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own files" ON files
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own files" ON files
+  FOR DELETE USING (user_id = auth.uid());
 ```
 
 ### Storage Buckets
@@ -373,13 +451,34 @@ USING (bucket_id = 'filesclon' AND EXISTS (
 3. Select a file from your device
 4. Click "Upload"
 
+### Moving Files and Folders
+
+#### Drag & Drop Method
+1. Click and drag any file or folder
+2. Drop it onto a destination folder or empty space
+3. Multiple selected items move together
+
+#### Bulk Selection Method
+1. Check the boxes next to files/folders you want to move
+2. Click "Move to..." in the selection toolbar
+3. Choose destination folder in the picker modal
+4. Click "Move" to confirm
+
+#### Context Menu Method
+1. Right-click on any file or folder
+2. Select "Move to..." from the context menu
+3. Choose destination folder in the picker modal
+4. Click "Move" to confirm
+
 ### Managing Files and Folders
 - Click the three-dot menu on any file or folder to access context menu options
-- Use the context menu to rename, delete, download, or share items
+- Use the context menu to rename, delete, download, share, or move items
+- Use checkboxes for multi-select operations
 
 ### Navigating the Hierarchy
 - Click on folders to navigate into them
-- Use the back arrow to navigate to the parent folder
+- Use the breadcrumb navigation to jump to parent folders
+- Use the "Home" button to return to root
 
 ### Searching for Files and Folders
 1. Use the search bar at the top of the file explorer
@@ -406,13 +505,18 @@ USING (bucket_id = 'filesclon' AND EXISTS (
 - ✅ File previews for images and PDFs
 - ✅ File sharing via public links
 - ✅ Search and filtering functionality
+- ✅ Advanced move operations (drag & drop, bulk select, context menus)
+- ✅ Multi-select with checkboxes
+- ✅ Selection toolbar for bulk operations
+- ✅ Folder picker for destination selection
 
 ### Short-term Roadmap
-- 🔲 User authentication with Supabase Auth
-- 🔲 Row Level Security for user-specific data
+- ✅ User authentication with Supabase Auth
+- ✅ Row Level Security for user-specific data
+- ✅ Bulk operations (select multiple files/folders)
+- ✅ Advanced move operations with drag & drop
 - 🔲 File versioning
 - 🔲 Grid/list view toggle
-- 🔲 Bulk operations (select multiple files/folders)
 - 🔲 Keyboard shortcuts
 
 ### Medium-term Roadmap
