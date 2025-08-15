@@ -6,6 +6,7 @@ CloudStorage is a comprehensive enterprise-grade cloud storage platform that com
 
 **Key Highlights:**
 - **Shared Workspace Model**: Organization-wide file access similar to Dropbox Business
+- **Advanced Move Operations**: Drag & drop, bulk selection, and context menu file/folder moving
 - **Dual Architecture**: Separate user and admin applications with role-based access control
 - **Modern Tech Stack**: React 19, TypeScript 5, Supabase, TailwindCSS, and Vite
 - **Enterprise Ready**: Authentication, audit logging, analytics, and user management
@@ -15,6 +16,12 @@ CloudStorage is a comprehensive enterprise-grade cloud storage platform that com
 
 ### 🗂️ File & Folder Management
 - **Hierarchical Structure**: Create nested folders with unlimited depth
+- **Advanced Move Operations**: 
+  - Drag & drop files/folders between locations
+  - Multi-select with checkboxes for bulk operations
+  - Context menu "Move to..." with folder picker
+  - Visual feedback during drag operations
+  - Smart validation prevents invalid moves
 - **Bulk Operations**: Upload multiple files, create folders, rename and delete operations
 - **Drag & Drop**: Intuitive file uploads with visual feedback
 - **File Previews**: Support for images, PDFs, and other document types
