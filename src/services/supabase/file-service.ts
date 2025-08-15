@@ -82,7 +82,9 @@ export const fileService = {
 
     // 2. Validar que la carpeta padre existe y pertenece al usuario
     if (file.folder_id) {
+      console.log('Upload validation - folder_id:', file.folder_id, 'userId:', userId);
       const isValidParent = await validateParentFolder(file.folder_id, userId);
+      console.log('Upload validation result:', isValidParent);
       if (!isValidParent) {
         throw new Error('Invalid parent folder or folder does not belong to user');
       }

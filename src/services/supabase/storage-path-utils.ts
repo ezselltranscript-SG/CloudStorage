@@ -65,17 +65,43 @@ export async function validateParentFolder(
   parentId: string | null,
   userId: string
 ): Promise<boolean> {
-  if (!parentId) return true; // null es válido (carpeta raíz)
+  if (!parentId) {
+    console.log('Parent folder is null (root), validation passed');
+    return true; // null es válido (carpeta raíz)
+  }
+
+  console.log('Validating parent folder:', { parentId, userId });
 
   const { data: folder, error } = await supabase
     .from('folders')
-    .select('id, user_id')
+    .select('id, user_id, deleted_at')
     .eq('id', parentId)
-    .eq('user_id', userId)
-    .is('deleted_at', null)
     .maybeSingle();
 
-  return !error && !!folder;
+  console.log('Raw folder query result:', { folder, error });
+
+  if (error) {
+    console.log('Database error during validation:', error);
+    return false;
+  }
+
+  if (!folder) {
+    console.log('Folder not found');
+    return false;
+  }
+
+  if (folder.deleted_at) {
+    console.log('Folder is deleted');
+    return false;
+  }
+
+  if (folder.user_id !== userId) {
+    console.log('Folder does not belong to user:', { folderUserId: folder.user_id, currentUserId: userId });
+    return false;
+  }
+
+  console.log('Validation passed');
+  return true;
 }
 
 /**
