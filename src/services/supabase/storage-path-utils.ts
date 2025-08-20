@@ -5,6 +5,18 @@ import { supabase } from './supabase-client';
  */
 
 /**
+ * Sanitiza un nombre de carpeta para uso en storage paths
+ * @param name - Nombre original de la carpeta
+ * @returns Nombre sanitizado sin caracteres especiales
+ */
+function sanitizeFolderName(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9\-_\s]/g, '') // Remover caracteres especiales
+    .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+    .trim();
+}
+
+/**
  * Construye la ruta completa de una carpeta desde la raíz
  * @param folderId - ID de la carpeta
  * @returns Ruta completa de la carpeta (ej: "Documents/Projects/MyProject")
@@ -25,14 +37,16 @@ export async function buildFolderPath(folderId: string | null): Promise<string> 
     return 'root';
   }
 
+  const sanitizedName = sanitizeFolderName(folder.name);
+
   // Si tiene padre, construir ruta recursivamente
   if (folder.parent_id) {
     const parentPath = await buildFolderPath(folder.parent_id);
-    return `${parentPath}/${folder.name}`;
+    return `${parentPath}/${sanitizedName}`;
   }
 
   // Es carpeta raíz
-  return folder.name;
+  return sanitizedName;
 }
 
 /**

@@ -13,8 +13,10 @@ import { ShareFileModal } from './ShareFileModal';
 import { SelectionToolbar } from '../ui/SelectionToolbar';
 import { Button } from '../ui/Button';
 import { useFilesByFolderId, useFilePublicUrl } from '../../hooks/useFiles';
-import { useFoldersByParentId, useFolderById } from '../../hooks/useFolders';
+import { useFoldersByParentId } from '../../hooks/useFolders';
+import { folderService } from '../../services/supabase/folder-service';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import type { File } from '../../services/supabase/file-service';
 import type { Folder } from '../../services/supabase/folder-service';
@@ -26,8 +28,9 @@ interface FileExplorerProps {
 
 export const FileExplorer: React.FC<FileExplorerProps> = ({ 
   currentFolderId, 
-  onFolderClick
+  onFolderClick 
 }) => {
+  const { user } = useAuth();
   // Estados para búsqueda y filtrado
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -66,9 +69,26 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     error: filesError 
   } = useFilesByFolderId(currentFolderId || undefined);
   
-  const { 
-    data: currentFolder 
-  } = useFolderById(currentFolderId);
+  const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
+  
+  // Fetch current folder data
+  useEffect(() => {
+    const fetchCurrentFolder = async () => {
+      if (currentFolderId && user?.id) {
+        try {
+          const folder = await folderService.getFolderById(currentFolderId, user.id);
+          setCurrentFolder(folder);
+        } catch (error) {
+          console.error('Error fetching current folder:', error);
+          setCurrentFolder(null);
+        }
+      } else {
+        setCurrentFolder(null);
+      }
+    };
+    
+    fetchCurrentFolder();
+  }, [currentFolderId, user?.id]);
   
   const { showSuccess, showError } = useToast();
   
@@ -88,11 +108,16 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         let parentId = currentFolder.parent_id;
         
         while (parentId) {
-          const parentFolder = await useFolderById(parentId).refetch();
-          if (parentFolder.data) {
-            path.unshift(parentFolder.data);
-            parentId = parentFolder.data.parent_id;
-          } else {
+          try {
+            const { data: parentFolder } = await folderService.getFolderById(parentId, user?.id);
+            if (parentFolder) {
+              path.unshift(parentFolder);
+              parentId = parentFolder.parent_id;
+            } else {
+              break;
+            }
+          } catch (error) {
+            console.error('Error fetching parent folder:', error);
             break;
           }
         }

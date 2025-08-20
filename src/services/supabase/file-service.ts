@@ -155,18 +155,20 @@ export const fileService = {
    * @param userId - ID del usuario autenticado
    */
   async moveToTrash(id: string, userId?: string) {
-    let query = supabase
+    if (!userId) throw new Error('User ID is required');
+    
+    const { data, error } = await supabase
       .from('files')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .is('deleted_at', null); // Solo si no está ya eliminado
+      .eq('user_id', userId)
+      .select()
+      .single();
     
-    if (userId) {
-      query = query.eq('user_id', userId);
+    if (error) {
+      console.error('Error moving file to trash:', error);
+      throw error;
     }
-    
-    const { data, error } = await query.select().maybeSingle();
-    if (error) throw error;
     return data ? { ...data, filename: (data as any).name } : data;
   },
 
@@ -329,7 +331,7 @@ export const fileService = {
       .eq('id', fileId)
       .eq('user_id', userId)
       .select()
-      .maybeSingle();
+      .single();
 
     if (error) {
       // Revertir movimiento en storage si falla la BD

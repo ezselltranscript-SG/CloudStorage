@@ -6,6 +6,7 @@ import { useSelection } from '../../contexts/SelectionContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils/cn';
+import { useOnClickOutside } from '../../hooks/useOnClickOutside';
 
 interface FileItemProps {
   file: {
@@ -56,20 +57,20 @@ export const FileItem: React.FC<FileItemProps> = ({
     });
   };
 
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
+  const closeMenu = () => setIsMenuOpen(false);
+
+  // Close menu when clicking outside
+  useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setIsMenuOpen(false));
 
   return (
     <div
       className={cn(
-        "group grid grid-cols-12 items-center px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer relative",
+        "group grid grid-cols-12 items-center px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 transition relative",
         isMenuOpen ? 'ring-1 ring-blue-300 z-10 bg-blue-50' : '',
         isSelected(file.id) ? 'bg-blue-50 border-blue-200' : '',
         isBeingDragged ? 'opacity-50' : '',
         className
       )}
-      onClick={onPreview}
       draggable
       onDragStart={(e) => {
         e.stopPropagation();
@@ -87,12 +88,16 @@ export const FileItem: React.FC<FileItemProps> = ({
           type="checkbox"
           checked={isSelected(file.id)}
           onChange={handleCheckboxChange}
+          onClick={(e) => e.stopPropagation()}
           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
         />
         <div className="flex-shrink-0 p-1.5 bg-slate-100 rounded">
           <FileIconComponent className="h-4 w-4 text-slate-500" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div 
+          className="min-w-0 flex-1 cursor-pointer"
+          onClick={() => onPreview && onPreview(file)}
+        >
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-slate-900 truncate">{file.name}</span>
             {file.is_shared && file.user_id !== user?.id && (
@@ -144,34 +149,36 @@ export const FileItem: React.FC<FileItemProps> = ({
           <Download className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" />
         </button>
         
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-1.5 rounded-md hover:bg-slate-200 transition-colors group"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMenuOpen(!isMenuOpen);
+            }}
             title="More options"
           >
             <MoreHorizontal className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" />
           </button>
           
-          {/* Menú contextual */}
+          {/* Menu contextual */}
           {isMenuOpen && (
-            <div 
-              ref={menuRef}
-              className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 z-[100] py-1"
+            <div className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" style={{ zIndex: 99999 }}>
+              <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMove && onMove(file);
+                closeMenu();
+              }}
+              className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
             >
+              <Move className="h-3.5 w-3.5 mr-2 text-slate-500" />
+              Move to...
+            </button>
+            
               <button
-                onClick={() => {
-                  onMove && onMove(file);
-                  closeMenu();
-                }}
-                className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-              >
-                <Move className="h-3.5 w-3.5 mr-2 text-slate-500" />
-                Move to...
-              </button>
-              
-              <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   onShare && onShare(file);
                   closeMenu();
                 }}
@@ -182,7 +189,8 @@ export const FileItem: React.FC<FileItemProps> = ({
               </button>
               
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   onRename && onRename(file);
                   closeMenu();
                 }}
@@ -195,7 +203,8 @@ export const FileItem: React.FC<FileItemProps> = ({
               <div className="border-t border-slate-100 my-1"></div>
               
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   onDelete && onDelete(file);
                   closeMenu();
                 }}

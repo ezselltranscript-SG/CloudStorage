@@ -52,6 +52,9 @@ export const useMove = () => {
       // Invalidate queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['files'] });
       queryClient.invalidateQueries({ queryKey: ['folders'] });
+      // Also invalidate specific folder queries
+      queryClient.invalidateQueries({ queryKey: ['files', 'folder'] });
+      queryClient.invalidateQueries({ queryKey: ['folders', 'parent'] });
     },
     onError: (error: any) => {
       showError(`Failed to move items: ${error.message}`);

@@ -176,25 +176,27 @@ export const folderService = {
    * @param userId - ID del usuario autenticado
    */
   async moveToTrash(id: string, userId?: string) {
+    if (!userId) throw new Error('User ID is required');
+    
     // Primero obtenemos la carpeta para guardar su parent_id original
     const folder = await this.getFolderById(id, userId);
     if (!folder) throw new Error('Folder not found');
     
-    let query = supabase
+    const { data, error } = await supabase
       .from('folders')
       .update({ 
         deleted_at: new Date().toISOString(),
         original_parent_id: folder.parent_id
       })
       .eq('id', id)
-      .is('deleted_at', null); // Solo si no está ya eliminado
+      .eq('user_id', userId)
+      .select()
+      .single();
     
-    if (userId) {
-      query = query.eq('user_id', userId);
+    if (error) {
+      console.error('Error moving folder to trash:', error);
+      throw error;
     }
-    
-    const { data, error } = await query.select().maybeSingle();
-    if (error) throw error;
     return data;
   },
 

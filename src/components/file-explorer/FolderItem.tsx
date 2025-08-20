@@ -144,7 +144,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
             <MoreHorizontal className="h-3.5 w-3.5 text-slate-500" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 z-[100] py-1">
+            <div className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" style={{ zIndex: 99999 }}>
               <button
                 className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                 onClick={e => {

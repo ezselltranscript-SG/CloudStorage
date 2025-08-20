@@ -37,16 +37,29 @@ export const useMoveFileToTrash = () => {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: (fileId: string) => fileService.moveToTrash(fileId, user?.id),
+    mutationFn: (fileId: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return fileService.moveToTrash(fileId, user.id);
+    },
     onSuccess: (deletedFile) => {
-      // Invalidar consultas para actualizar la UI
+      // Invalidar consultas para actualizar la UI inmediatamente
       queryClient.invalidateQueries({ 
         queryKey: ['files', 'folder', deletedFile?.folder_id, user?.id] 
       });
       queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
+      });
+      queryClient.invalidateQueries({ 
         queryKey: ['trash', 'files', user?.id] 
       });
+      // Force refetch of current folder
+      queryClient.refetchQueries({ 
+        queryKey: ['files', 'folder'] 
+      });
     },
+    onError: (error) => {
+      console.error('Error moving file to trash:', error);
+    }
   });
 };
 
@@ -58,16 +71,29 @@ export const useMoveFolderToTrash = () => {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: (folderId: string) => folderService.moveToTrash(folderId, user?.id),
+    mutationFn: (folderId: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return folderService.moveToTrash(folderId, user.id);
+    },
     onSuccess: (deletedFolder) => {
-      // Invalidar consultas para actualizar la UI
+      // Invalidar consultas para actualizar la UI inmediatamente
       queryClient.invalidateQueries({ 
         queryKey: ['folders', 'parent', deletedFolder?.parent_id, user?.id] 
       });
       queryClient.invalidateQueries({ 
+        queryKey: ['folders'] 
+      });
+      queryClient.invalidateQueries({ 
         queryKey: ['trash', 'folders', user?.id] 
       });
+      // Force refetch of current folder
+      queryClient.refetchQueries({ 
+        queryKey: ['folders', 'parent'] 
+      });
     },
+    onError: (error) => {
+      console.error('Error moving folder to trash:', error);
+    }
   });
 };
 
@@ -81,12 +107,19 @@ export const useRestoreFileFromTrash = () => {
   return useMutation({
     mutationFn: (fileId: string) => fileService.restoreFromTrash(fileId, user?.id),
     onSuccess: (restoredFile) => {
-      // Invalidar consultas para actualizar la UI
+      // Invalidar consultas para actualizar la UI inmediatamente
       queryClient.invalidateQueries({ 
         queryKey: ['files', 'folder', restoredFile?.folder_id, user?.id] 
       });
       queryClient.invalidateQueries({ 
+        queryKey: ['files'] 
+      });
+      queryClient.invalidateQueries({ 
         queryKey: ['trash', 'files', user?.id] 
+      });
+      // Force refetch of current folder
+      queryClient.refetchQueries({ 
+        queryKey: ['files', 'folder'] 
       });
     },
   });
@@ -102,12 +135,19 @@ export const useRestoreFolderFromTrash = () => {
   return useMutation({
     mutationFn: (folderId: string) => folderService.restoreFromTrash(folderId, user?.id),
     onSuccess: (restoredFolder) => {
-      // Invalidar consultas para actualizar la UI
+      // Invalidar consultas para actualizar la UI inmediatamente
       queryClient.invalidateQueries({ 
         queryKey: ['folders', 'parent', restoredFolder?.parent_id, user?.id] 
       });
       queryClient.invalidateQueries({ 
+        queryKey: ['folders'] 
+      });
+      queryClient.invalidateQueries({ 
         queryKey: ['trash', 'folders', user?.id] 
+      });
+      // Force refetch of current folder
+      queryClient.refetchQueries({ 
+        queryKey: ['folders', 'parent'] 
       });
     },
   });

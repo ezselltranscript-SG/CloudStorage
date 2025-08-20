@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
-import { Move, Trash2, Share, X } from 'lucide-react';
+import { X, Move, Share2, Trash2 } from 'lucide-react';
 import { Button } from './Button';
 import { FolderPicker } from './FolderPicker';
 import { useSelection } from '../../contexts/SelectionContext';
+import { useMoveFileToTrash, useMoveFolderToTrash } from '../../hooks/useTrash';
 import { useMove } from '../../hooks/useMove';
+import { useToast } from '../../contexts/ToastContext';
 
-export const SelectionToolbar: React.FC = () => {
+interface SelectionToolbarProps {
+  onMove?: () => void;
+  onShare?: () => void;
+  onDelete?: () => void;
+}
+
+export const SelectionToolbar: React.FC<SelectionToolbarProps> = () => {
   const { selectedItems, clearSelection, selectedCount } = useSelection();
+  const moveFileToTrash = useMoveFileToTrash();
+  const moveFolderToTrash = useMoveFolderToTrash();
   const { moveItems, isMoving } = useMove();
+  const { showSuccess, showError } = useToast();
   const [showFolderPicker, setShowFolderPicker] = useState(false);
 
   if (!selectedItems.length) return null;
@@ -25,9 +36,27 @@ export const SelectionToolbar: React.FC = () => {
     setShowFolderPicker(false);
   };
 
-  const handleDelete = () => {
-    // TODO: Implement delete functionality
-    console.log('Delete selected items:', selectedItems);
+  const handleDelete = async () => {
+    try {
+      const fileItems = selectedItems.filter(item => item.type === 'file');
+      const folderItems = selectedItems.filter(item => item.type === 'folder');
+
+      // Move files to trash
+      for (const file of fileItems) {
+        await moveFileToTrash.mutateAsync(file.id);
+      }
+
+      // Move folders to trash
+      for (const folder of folderItems) {
+        await moveFolderToTrash.mutateAsync(folder.id);
+      }
+
+      showSuccess('Items moved to trash successfully');
+      clearSelection();
+    } catch (error) {
+      console.error('Error moving items to trash:', error);
+      showError('Failed to move items to trash');
+    }
   };
 
   const handleShare = () => {
@@ -45,7 +74,7 @@ export const SelectionToolbar: React.FC = () => {
         <div className="flex items-center space-x-2">
           <Button
             onClick={handleMoveClick}
-            disabled={isMoving}
+            disabled={isMoving || moveFileToTrash.isPending || moveFolderToTrash.isPending}
             variant="outline"
             size="sm"
             className="flex items-center space-x-1"
@@ -60,7 +89,7 @@ export const SelectionToolbar: React.FC = () => {
             size="sm"
             className="flex items-center space-x-1"
           >
-            <Share className="w-4 h-4" />
+            <Share2 className="w-4 h-4" />
             <span>Share</span>
           </Button>
           
