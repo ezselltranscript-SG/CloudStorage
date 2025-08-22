@@ -36,6 +36,19 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = () => {
     setShowFolderPicker(false);
   };
 
+  const getItemCounts = () => {
+    const fileCount = selectedItems.filter(item => item.type === 'file').length;
+    const folderCount = selectedItems.filter(item => item.type === 'folder').length;
+    
+    if (fileCount > 0 && folderCount > 0) {
+      return { count: selectedItems.length, type: 'mixed' as const };
+    } else if (fileCount > 0) {
+      return { count: fileCount, type: 'files' as const };
+    } else {
+      return { count: folderCount, type: 'folders' as const };
+    }
+  };
+
   const handleDelete = async () => {
     try {
       const fileItems = selectedItems.filter(item => item.type === 'file');
@@ -119,6 +132,8 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = () => {
         onClose={() => setShowFolderPicker(false)}
         onSelect={handleMoveConfirm}
         title="Move items to..."
+        itemCount={getItemCounts().count}
+        itemType={getItemCounts().type}
       />
     </>
   );

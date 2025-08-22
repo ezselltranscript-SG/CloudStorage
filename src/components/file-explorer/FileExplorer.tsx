@@ -12,12 +12,14 @@ import { FilePreviewModal } from './FilePreviewModal';
 import { ShareFileModal } from './ShareFileModal';
 import { SelectionToolbar } from '../ui/SelectionToolbar';
 import { Button } from '../ui/Button';
-import { useFilesByFolderId, useFilePublicUrl } from '../../hooks/useFiles';
+import { useFilesByFolderId } from '../../hooks/useFiles';
 import { useFoldersByParentId } from '../../hooks/useFolders';
 import { folderService } from '../../services/supabase/folder-service';
+import { fileService } from '../../services/supabase/file-service';
 import { useToast } from '../../contexts/ToastContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
+import { SelectAllCheckbox } from '../ui/SelectAllCheckbox';
+import { downloadFolderAsZip, type FolderDownloadProgress } from '../../services/folder-download-service';
 import type { File } from '../../services/supabase/file-service';
 import type { Folder } from '../../services/supabase/folder-service';
 
@@ -30,7 +32,6 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   currentFolderId, 
   onFolderClick 
 }) => {
-  const { user } = useAuth();
   // Estados para búsqueda y filtrado
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -74,9 +75,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   // Fetch current folder data
   useEffect(() => {
     const fetchCurrentFolder = async () => {
-      if (currentFolderId && user?.id) {
+      if (currentFolderId) {
         try {
-          const folder = await folderService.getFolderById(currentFolderId, user.id);
+          // Para carpetas compartidas, no filtrar por userId para poder acceder a carpetas de otros usuarios
+          const folder = await folderService.getFolderById(currentFolderId);
           setCurrentFolder(folder);
         } catch (error) {
           console.error('Error fetching current folder:', error);
@@ -88,7 +90,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     };
     
     fetchCurrentFolder();
-  }, [currentFolderId, user?.id]);
+  }, [currentFolderId]);
   
   const { showSuccess, showError } = useToast();
   
@@ -109,7 +111,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         
         while (parentId) {
           try {
-            const { data: parentFolder } = await folderService.getFolderById(parentId, user?.id);
+            // Para carpetas compartidas, no filtrar por userId para poder acceder a carpetas de otros usuarios
+            const parentFolder = await folderService.getFolderById(parentId);
             if (parentFolder) {
               path.unshift(parentFolder);
               parentId = parentFolder.parent_id;
@@ -129,19 +132,15 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     buildBreadcrumbs();
   }, [currentFolderId, currentFolder]);
   
-  // Filtrado de archivos y carpetas por búsqueda
-  // Aplicamos filtros adicionales según la vista (compartida o papelera)
-  const filteredFolders = folders?.filter(folder => {
-    // Solo filtro por búsqueda - mostrar todas las carpetas activas
-    const matchesSearch = folder.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && !folder.deleted_at; // Solo excluir carpetas eliminadas
-  }) || [];
-  
-  const filteredFiles = files?.filter(file => {
-    // Solo filtro por búsqueda - mostrar todos los archivos activos
-    const matchesSearch = file.filename.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && !file.deleted_at; // Solo excluir archivos eliminados
-  }) || [];
+  // Filtrar archivos y carpetas basado en la búsqueda
+  const filteredFolders = (folders || []).filter(folder => 
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredFiles = (files || []).filter(file => 
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
   
   // Handlers para drag & drop de archivos (upload)
   useEffect(() => {
@@ -197,25 +196,51 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setIsDeleteFileModalOpen(true);
   };
   
-  const handleFileDownload = (file: File) => {
+  const handleFileDownload = async (file: File) => {
     try {
-      // Obtenemos la URL pública del archivo
-      const { publicUrl } = useFilePublicUrl(file.storage_path || '');
+      if (!file.storage_path) {
+        showError('Error', 'File path not found. Cannot download.');
+        return;
+      }
+
+      // Descargar el archivo usando fetch para tener control total sobre el nombre
+      const publicUrl = fileService.getPublicUrl(file.storage_path);
+      
       if (publicUrl) {
-        // Creamos un enlace temporal para la descarga
+        showSuccess('Download Started', `Downloading ${file.name}...`);
+        
+        // Fetch el archivo como blob
+        const response = await fetch(publicUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // Crear URL temporal para el blob
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Crear enlace de descarga con el nombre original
         const link = document.createElement('a');
-        link.href = publicUrl;
-        link.download = file.name;
+        link.href = blobUrl;
+        link.download = file.name; // Usar el nombre original del archivo
+        link.style.display = 'none';
+        
+        // Añadir al DOM, hacer click y remover
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showSuccess('Download started');
+        
+        // Limpiar la URL temporal
+        window.URL.revokeObjectURL(blobUrl);
+        
+        showSuccess('Download Complete', `${file.name} downloaded successfully`);
       } else {
-        showError('Error', 'Cannot download the file. Please try again.');
+        showError('Error', 'Cannot generate download URL. Please try again.');
       }
     } catch (error) {
       console.error('Error downloading file:', error);
-      showError('Download Error', 'An error occurred while downloading the file. Please try again.');
+      showError('Error', 'Failed to download file. Please try again.');
     }
   };
   
@@ -224,9 +249,28 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
     setIsShareFileModalOpen(true);
   };
 
-  const handleFolderMove = (folder: Folder) => {
+  const handleFolderMove = () => {
     // This will be handled by the FolderPicker in the context menu
-    console.log('Move folder:', folder.name);
+  };
+
+  const handleFolderDownload = async (folder: Folder) => {
+    try {
+      showSuccess('Download Started', `Preparing ${folder.name} for download...`);
+      
+      await downloadFolderAsZip(folder, (progress: FolderDownloadProgress) => {
+        // Mostrar progreso en el toast
+        showSuccess(
+          'Downloading...', 
+          `Processing ${progress.current}/${progress.total} files: ${progress.currentFile}`
+        );
+      });
+      
+      showSuccess('Download Complete', `${folder.name}.zip downloaded successfully`);
+    } catch (error) {
+      console.error('Error downloading folder:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      showError('Download Failed', `Failed to download ${folder.name}: ${errorMessage}`);
+    }
   };
 
   const handleFileMove = (file: File) => {
@@ -376,7 +420,6 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         </div>
       )}
       
-// ...
       {isEmpty && (
         <div className="text-center py-16">
           <div className="mx-auto h-12 w-12 text-slate-400">
@@ -401,7 +444,17 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                 {/* Cabecera de tabla */}
                 <div className="grid grid-cols-12 items-center px-4 py-2 border-b border-slate-100 text-xs font-medium text-slate-500">
-                  <div className="col-span-6">Name</div>
+                  <div className="col-span-6 flex items-center gap-3">
+                    <SelectAllCheckbox 
+                      items={filteredFolders.map(folder => ({
+                        id: folder.id,
+                        type: 'folder' as const,
+                        name: folder.name
+                      }))}
+                      className="h-4 w-4"
+                    />
+                    Name
+                  </div>
                   <div className="col-span-2">Modified</div>
                   <div className="col-span-2">Size</div>
                   <div className="col-span-2 text-right">Actions</div>
@@ -415,7 +468,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                     onClick={() => handleFolderClick(folder)}
                     onRename={() => handleFolderRename(folder)}
                     onDelete={() => handleFolderDelete(folder)}
-                    onMove={() => handleFolderMove(folder)}
+                    onMove={() => handleFolderMove()}
+                    onDownload={() => handleFolderDownload(folder)}
                   />
                 ))}
               </div>
@@ -429,7 +483,17 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                 {/* Cabecera de tabla */}
                 <div className="grid grid-cols-12 items-center px-4 py-2 border-b border-slate-100 text-xs font-medium text-slate-500">
-                  <div className="col-span-6">Name</div>
+                  <div className="col-span-6 flex items-center gap-3">
+                    <SelectAllCheckbox 
+                      items={filteredFiles.map(file => ({
+                        id: file.id,
+                        type: 'file' as const,
+                        name: file.name
+                      }))}
+                      className="h-4 w-4"
+                    />
+                    Name
+                  </div>
                   <div className="col-span-2">Modified</div>
                   <div className="col-span-2">Size</div>
                   <div className="col-span-2 text-right">Actions</div>

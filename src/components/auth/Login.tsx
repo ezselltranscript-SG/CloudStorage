@@ -17,9 +17,13 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     const success = await signIn(email, password);
     if (success) {
       navigate('/');
+    } else {
+      // Keep email, only clear password on authentication error
+      setPassword('');
     }
   };
 

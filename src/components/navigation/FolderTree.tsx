@@ -50,18 +50,21 @@ const FolderNode: React.FC<FolderNodeProps> = ({
     <div className="folder-node">
       <div 
         className={cn(
-          "flex items-center py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors",
+          "flex items-center py-1.5 rounded-md cursor-pointer text-sm transition-colors",
           selectedFolderId === folder.id 
             ? "bg-blue-50 text-blue-700 border border-blue-200" 
             : "hover:bg-slate-50 text-slate-700"
         )}
-        style={{ paddingLeft: `${(level * 12) + 8}px` }}
+        style={{ 
+          paddingLeft: `${8 + (level * 20)}px`,
+          paddingRight: '8px'
+        }}
         onClick={() => onFolderSelect(folder.id)}
       >
         {hasChildren ? (
           <button 
             onClick={toggleOpen}
-            className="mr-1 p-0.5 rounded-sm hover:bg-slate-200 focus:outline-none transition-colors"
+            className="mr-2 p-0.5 rounded-sm hover:bg-slate-200 focus:outline-none transition-colors flex-shrink-0"
           >
             {isOpen ? (
               <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
@@ -70,7 +73,7 @@ const FolderNode: React.FC<FolderNodeProps> = ({
             )}
           </button>
         ) : (
-          <span className="w-4 mr-1" />
+          <span className="w-5 mr-2 flex-shrink-0" />
         )}
         <FolderIcon className={cn(
           "h-4 w-4 mr-2 flex-shrink-0",
@@ -103,6 +106,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 }) => {
   const { data: folders = [], isLoading, error } = useAllFolders();
   const rootFolders = folders.filter(folder => folder.parent_id === null);
+  
   
   if (isLoading) {
     return (

@@ -7,6 +7,8 @@ import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils/cn';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { Portal } from '../ui/Portal';
+import { getFileTypeDisplayName } from '../../utils/file-type-utils';
 
 interface FileItemProps {
   file: {
@@ -41,7 +43,9 @@ export const FileItem: React.FC<FileItemProps> = ({
   className,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const { user } = useAuth();
   const { isSelected, toggleSelection } = useSelection();
   const { handleDragStart, handleDragEnd, draggedItems } = useDragAndDrop();
@@ -60,7 +64,32 @@ export const FileItem: React.FC<FileItemProps> = ({
   const closeMenu = () => setIsMenuOpen(false);
 
   // Close menu when clicking outside
-  useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setIsMenuOpen(false));
+  useOnClickOutside(menuRef as React.RefObject<HTMLElement>, closeMenu);
+
+  const handleMenuToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isMenuOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 176; // w-44 = 11rem = 176px
+      const dropdownHeight = 200;
+      
+      let top = rect.bottom + 4; // Default: below button
+      let left = rect.right - dropdownWidth; // Align to right edge
+      
+      // Check if dropdown would go below viewport
+      if (top + dropdownHeight > window.innerHeight) {
+        top = rect.top - dropdownHeight - 4; // Show above
+      }
+      
+      // Check if dropdown would go outside left edge
+      if (left < 8) {
+        left = 8;
+      }
+      
+      setDropdownPosition({ top, left });
+    }
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   return (
     <div
@@ -106,7 +135,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               </span>
             )}
           </div>
-          <div className="text-xs text-slate-500 mt-0.5">{file.mimetype || 'File'}</div>
+          <div className="text-xs text-slate-500 mt-0.5">{getFileTypeDisplayName(file.mimetype) || 'File'}</div>
         </div>
       </div>
       
@@ -151,11 +180,9 @@ export const FileItem: React.FC<FileItemProps> = ({
         
         <div ref={menuRef} className="relative">
           <button
-            className="p-1.5 rounded-md hover:bg-slate-200 transition-colors group"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMenuOpen(!isMenuOpen);
-            }}
+            ref={buttonRef}
+            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-200 transition-colors focus:outline-none"
+            onClick={handleMenuToggle}
             title="More options"
           >
             <MoreHorizontal className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" />
@@ -163,7 +190,16 @@ export const FileItem: React.FC<FileItemProps> = ({
           
           {/* Menu contextual */}
           {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" style={{ zIndex: 99999 }}>
+            <Portal>
+              <div 
+                ref={menuRef}
+                className="fixed w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" 
+                style={{ 
+                  top: dropdownPosition.top,
+                  left: dropdownPosition.left,
+                  zIndex: 99999 
+                }}
+              >
               <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -213,7 +249,8 @@ export const FileItem: React.FC<FileItemProps> = ({
                 <Trash2 className="h-3.5 w-3.5 mr-2 text-red-500" />
                 Delete
               </button>
-            </div>
+              </div>
+            </Portal>
           )}
         </div>
       </div>

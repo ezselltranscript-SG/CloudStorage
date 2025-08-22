@@ -23,12 +23,39 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
 
   if (!isOpen) return null;
 
+  const validateFolderName = (name: string): string | null => {
+    const trimmedName = name.trim();
+    
+    if (!trimmedName) {
+      return 'Folder name cannot be empty';
+    }
+    
+    if (trimmedName.length > 50) {
+      return 'Folder name cannot exceed 50 characters';
+    }
+    
+    // Check for invalid characters (common file system restrictions)
+    const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
+    if (invalidChars.test(trimmedName)) {
+      return 'Folder name contains invalid characters';
+    }
+    
+    // Check for reserved names (Windows)
+    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+    if (reservedNames.test(trimmedName)) {
+      return 'This folder name is reserved and cannot be used';
+    }
+    
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!folderName.trim()) {
-      setError('Folder name cannot be empty');
-      showError('Invalid Name', 'Folder name cannot be empty');
+    const validationError = validateFolderName(folderName);
+    if (validationError) {
+      setError(validationError);
+      showError('Invalid Name', validationError);
       return;
     }
 
@@ -74,13 +101,17 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               id="folderName"
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
+              maxLength={50}
               className={cn(
                 "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
                 error ? "border-red-500" : "border-gray-300"
               )}
-              placeholder="My folder"
+              placeholder="My folder (max 50 characters)"
               autoFocus
             />
+            <div className="mt-1 text-xs text-gray-500 text-right">
+              {folderName.length}/50 characters
+            </div>
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
           </div>
 

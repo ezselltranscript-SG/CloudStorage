@@ -262,23 +262,71 @@ export const folderService = {
 
 
   /**
-   * Elimina permanentemente una carpeta (hard delete)
+   * Elimina permanentemente una carpeta (hard delete) y todo su contenido recursivamente
    * @param id - ID de la carpeta a eliminar permanentemente
    * @param userId - ID del usuario autenticado
    */
   async permanentDelete(id: string, userId?: string) {
-    let query = supabase
+    if (!userId) throw new Error('User ID is required for permanent delete');
+    
+    // Eliminar recursivamente todo el contenido de la carpeta
+    await this.permanentDeleteRecursive(id, userId);
+    
+    return true;
+  },
+
+  /**
+   * Función auxiliar para eliminar recursivamente carpetas y su contenido
+   * @param folderId - ID de la carpeta a eliminar
+   * @param userId - ID del usuario
+   */
+  async permanentDeleteRecursive(folderId: string, userId: string) {
+    // 1. Obtener todas las subcarpetas
+    const { data: subfolders } = await supabase
+      .from('folders')
+      .select('id')
+      .eq('parent_id', folderId)
+      .eq('user_id', userId);
+
+    // 2. Eliminar recursivamente todas las subcarpetas
+    if (subfolders && subfolders.length > 0) {
+      for (const subfolder of subfolders) {
+        await this.permanentDeleteRecursive(subfolder.id, userId);
+      }
+    }
+
+    // 3. Obtener todos los archivos en esta carpeta
+    const { data: files } = await supabase
+      .from('files')
+      .select('id, storage_path')
+      .eq('folder_id', folderId)
+      .eq('user_id', userId);
+
+    // 4. Eliminar todos los archivos (físicos y registros)
+    if (files && files.length > 0) {
+      const { fileService } = await import('./file-service');
+      
+      for (const file of files) {
+        try {
+          await fileService.permanentDelete(file.id, userId);
+        } catch (error) {
+          console.error(`Error deleting file ${file.id}:`, error);
+          // Continuar con otros archivos aunque uno falle
+        }
+      }
+    }
+
+    // 5. Finalmente, eliminar la carpeta actual
+    const { error } = await supabase
       .from('folders')
       .delete()
-      .eq('id', id);
+      .eq('id', folderId)
+      .eq('user_id', userId);
     
-    if (userId) {
-      query = query.eq('user_id', userId);
+    if (error) {
+      console.error(`Error deleting folder ${folderId}:`, error);
+      throw error;
     }
-    
-    const { error } = await query;
-    if (error) throw error;
-    return true;
   },
 
   /**

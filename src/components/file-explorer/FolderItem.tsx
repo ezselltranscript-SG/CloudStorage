@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Folder, MoreHorizontal, Pencil, Trash2, Move } from 'lucide-react';
+import { Folder, MoreHorizontal, Pencil, Trash2, Move, Download } from 'lucide-react';
 import type { Folder as FolderType } from '../../services/supabase/folder-service';
 import { cn } from '../../lib/utils/cn';
 import { useOnClickOutside } from '../../hooks/useOnClickOutside';
+import { Portal } from '../ui/Portal';
 import { ShareToggleButton } from './ShareToggleButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSelection } from '../../contexts/SelectionContext';
@@ -15,6 +16,7 @@ interface FolderItemProps {
   onRename?: (folder: FolderType) => void;
   onDelete?: (folder: FolderType) => void;
   onMove?: (folder: FolderType) => void;
+  onDownload?: (folder: FolderType) => void;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -24,9 +26,12 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   onRename,
   onDelete,
   onMove,
+  onDownload,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const { user } = useAuth();
   const { isSelected, toggleSelection } = useSelection();
   const { handleDragStart, handleDragEnd, handleDragOver, handleDragLeave, handleDrop, draggedItems, dragOverTarget, canDropOnTarget } = useDragAndDrop();
@@ -51,6 +56,31 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   
   // We fix the type error using a type assertion for the ref
   useOnClickOutside(menuRef as React.RefObject<HTMLElement>, () => setMenuOpen(false));
+
+  const handleMenuToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!menuOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 176; // w-44 = 11rem = 176px
+      const dropdownHeight = 200;
+      
+      let top = rect.bottom + 4; // Default: below button
+      let left = rect.right - dropdownWidth; // Align to right edge
+      
+      // Check if dropdown would go below viewport
+      if (top + dropdownHeight > window.innerHeight) {
+        top = rect.top - dropdownHeight - 4; // Show above
+      }
+      
+      // Check if dropdown would go outside left edge
+      if (left < 8) {
+        left = 8;
+      }
+      
+      setDropdownPosition({ top, left });
+    }
+    setMenuOpen(!menuOpen);
+  };
   return (
     <div
       className={cn(
@@ -134,17 +164,24 @@ export const FolderItem: React.FC<FolderItemProps> = ({
         
         <div ref={menuRef} className="relative">
           <button
+            ref={buttonRef}
             className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-slate-200 transition-colors focus:outline-none"
-            onClick={e => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
+            onClick={handleMenuToggle}
             aria-label="Folder options"
           >
             <MoreHorizontal className="h-3.5 w-3.5 text-slate-500" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" style={{ zIndex: 99999 }}>
+            <Portal>
+              <div 
+                ref={menuRef}
+                className="fixed w-44 rounded-md shadow-xl bg-white border border-slate-200 py-1" 
+                style={{ 
+                  top: dropdownPosition.top,
+                  left: dropdownPosition.left,
+                  zIndex: 99999 
+                }}
+              >
               <button
                 className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                 onClick={e => {
@@ -155,6 +192,18 @@ export const FolderItem: React.FC<FolderItemProps> = ({
               >
                 <Move className="h-3.5 w-3.5 mr-2 text-slate-500" />
                 <span>Move to...</span>
+              </button>
+              
+              <button
+                className="flex w-full items-center px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                onClick={e => {
+                  e.stopPropagation();
+                  onDownload?.(folder);
+                  setMenuOpen(false);
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-2 text-slate-500" />
+                <span>Download as ZIP</span>
               </button>
               
               <button
@@ -180,7 +229,8 @@ export const FolderItem: React.FC<FolderItemProps> = ({
                 <Trash2 className="h-3.5 w-3.5 mr-2 text-red-500" />
                 <span>Delete</span>
               </button>
-            </div>
+              </div>
+            </Portal>
           )}
         </div>
       </div>

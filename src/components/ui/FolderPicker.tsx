@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Folder, FolderPlus, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Folder, FolderPlus, ChevronRight, ChevronDown, FileText, Files } from 'lucide-react';
 import { Button } from './Button';
 import { folderService, type Folder as FolderType } from '../../services/supabase/folder-service';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +16,8 @@ interface FolderPickerProps {
   onSelect: (folderId: string | null) => void;
   title?: string;
   excludeFolderIds?: string[]; // Carpetas a excluir (ej: la carpeta que se está moviendo)
+  itemCount?: number; // Número de items a mover
+  itemType?: 'files' | 'folders' | 'mixed'; // Tipo de items
 }
 
 export const FolderPicker: React.FC<FolderPickerProps> = ({
@@ -23,7 +25,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   onClose,
   onSelect,
   title = "Move to...",
-  excludeFolderIds = []
+  excludeFolderIds = [],
+  itemCount = 0,
+  itemType = 'mixed'
 }) => {
   const [folders, setFolders] = useState<FolderNode[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -128,6 +132,65 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     onClose();
   };
 
+  const getSelectedFolderPath = (folderId: string | null): string => {
+    if (!folderId) return 'My Files';
+    
+    const findFolderPath = (folders: FolderNode[], targetId: string, path: string[] = []): string[] | null => {
+      for (const folder of folders) {
+        const currentPath = [...path, folder.name];
+        if (folder.id === targetId) {
+          return currentPath;
+        }
+        if (folder.children) {
+          const childPath = findFolderPath(folder.children, targetId, currentPath);
+          if (childPath) return childPath;
+        }
+      }
+      return null;
+    };
+
+    const path = findFolderPath(folders, folderId);
+    return path ? `My Files > ${path.join(' > ')}` : 'My Files';
+  };
+
+  const getItemTypeIcon = () => {
+    switch (itemType) {
+      case 'files': return <FileText className="w-4 h-4 text-blue-500" />;
+      case 'folders': return <Folder className="w-4 h-4 text-blue-500" />;
+      default: return <Files className="w-4 h-4 text-blue-500" />;
+    }
+  };
+
+  const getItemTypeText = () => {
+    if (itemCount === 1) {
+      switch (itemType) {
+        case 'files': return 'file';
+        case 'folders': return 'folder';
+        default: return 'item';
+      }
+    }
+    return itemType === 'files' ? 'files' : itemType === 'folders' ? 'folders' : 'items';
+  };
+
+  const getButtonText = () => {
+    const folderName = selectedFolderId ? 
+      folders.find(f => f.id === selectedFolderId)?.name || 
+      findFolderInTree(folders, selectedFolderId)?.name || 'Selected Folder'
+      : 'My Files';
+    return `Move to ${folderName}`;
+  };
+
+  const findFolderInTree = (folders: FolderNode[], targetId: string): FolderNode | null => {
+    for (const folder of folders) {
+      if (folder.id === targetId) return folder;
+      if (folder.children) {
+        const found = findFolderInTree(folder.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const renderFolder = (folder: FolderNode, level = 0) => {
     const hasChildren = folder.children && folder.children.length > 0;
     const isSelected = selectedFolderId === folder.id;
@@ -135,33 +198,38 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     return (
       <div key={folder.id}>
         <div
-          className={`flex items-center py-2 px-3 cursor-pointer hover:bg-gray-50 ${
-            isSelected ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+          className={`flex items-center py-2 cursor-pointer transition-colors ${
+            isSelected 
+              ? 'bg-blue-50 border-2 border-blue-300 rounded-md mx-2 shadow-sm' 
+              : 'hover:bg-gray-50'
           }`}
-          style={{ paddingLeft: `${12 + level * 20}px` }}
+          style={{ 
+            paddingLeft: `${8 + (level * 20)}px`,
+            paddingRight: '8px'
+          }}
           onClick={() => setSelectedFolderId(folder.id)}
         >
-          <div className="flex items-center flex-1">
-            {hasChildren ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFolder(folder.id);
-                }}
-                className="p-1 hover:bg-gray-200 rounded mr-1"
-              >
-                {folder.expanded ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-              </button>
-            ) : (
-              <div className="w-6" />
-            )}
-            <Folder className="w-4 h-4 text-blue-500 mr-2" />
-            <span className="text-sm">{folder.name}</span>
-          </div>
+          {hasChildren ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFolder(folder.id);
+              }}
+              className="mr-2 p-0.5 rounded-sm hover:bg-gray-200 focus:outline-none transition-colors flex-shrink-0"
+            >
+              {folder.expanded ? (
+                <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+              )}
+            </button>
+          ) : (
+            <div className="w-6 mr-2 flex-shrink-0" />
+          )}
+          <Folder className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0" />
+          <span className={`text-sm flex-1 ${
+            isSelected ? 'font-semibold text-blue-700' : ''
+          }`}>{folder.name}</span>
         </div>
         
         {hasChildren && folder.expanded && (
@@ -189,6 +257,21 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           </button>
         </div>
 
+        {/* Context Header */}
+        {itemCount > 0 && (
+          <div className="bg-blue-50 border-b px-4 py-3">
+            <div className="flex items-center space-x-2 text-sm">
+              {getItemTypeIcon()}
+              <span className="text-blue-700 font-medium">
+                Moving {itemCount} {getItemTypeText()} to:
+              </span>
+              <span className="text-blue-900 font-semibold">
+                {getSelectedFolderPath(selectedFolderId)}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -199,13 +282,21 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             <>
               {/* Root option */}
               <div
-                className={`flex items-center py-3 px-3 cursor-pointer hover:bg-gray-50 border-b ${
-                  selectedFolderId === null ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                className={`flex items-center py-3 cursor-pointer transition-colors border-b ${
+                  selectedFolderId === null 
+                    ? 'bg-blue-50 border-2 border-blue-300 rounded-md mx-2 shadow-sm' 
+                    : 'hover:bg-gray-50'
                 }`}
+                style={{
+                  paddingLeft: '8px',
+                  paddingRight: '8px'
+                }}
                 onClick={() => setSelectedFolderId(null)}
               >
-                <Folder className="w-4 h-4 text-gray-500 mr-2" />
-                <span className="text-sm font-medium">My Files (Root)</span>
+                <Folder className="w-4 h-4 text-gray-500 mr-2 flex-shrink-0" />
+                <span className={`text-sm font-medium flex-1 ${
+                  selectedFolderId === null ? 'font-semibold text-blue-700' : ''
+                }`}>My Files (Root)</span>
               </div>
 
               {/* Folder tree */}
@@ -248,8 +339,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             <Button
               onClick={handleSelect}
               disabled={loading}
+              className="min-w-[120px]"
             >
-              Move Here
+              {loading ? 'Moving...' : getButtonText()}
             </Button>
           </div>
         </div>
