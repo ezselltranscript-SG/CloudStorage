@@ -26,7 +26,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Cloud className="h-5 w-5 text-white" />
         </div>
         <div>
-          <span className="text-lg font-semibold text-slate-900">CloudDrive</span>
+          <span className="text-lg font-semibold">
+            <span className="text-blue-600">Cloud</span>
+            <span className="text-slate-900">Storage</span>
+          </span>
           <div className="text-xs text-slate-500 mt-0.5">Personal Storage</div>
         </div>
       </div>
