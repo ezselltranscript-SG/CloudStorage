@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../services/supabase/supabase-client';
 import type { Role, Permission } from '../types/auth';
 
 /**

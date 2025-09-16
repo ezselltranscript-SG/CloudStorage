@@ -4,6 +4,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { AppRoutes } from './routes/AppRoutes';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 // Crear un cliente de React Query
@@ -18,17 +19,19 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AuthProvider>
-          <SelectionProvider>
-            <Router basename="/">
-              <AppRoutes />
-            </Router>
-          </SelectionProvider>
-        </AuthProvider>
-      </ToastProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider>
+            <SelectionProvider>
+              <Router basename="/">
+                <AppRoutes />
+              </Router>
+            </SelectionProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
