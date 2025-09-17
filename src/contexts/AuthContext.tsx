@@ -23,11 +23,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
-    // Get initial session with timeout and error handling
     const initAuth = async () => {
       try {
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 15000)
         );
         
         const sessionPromise = supabase.auth.getSession();
@@ -36,9 +35,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session);
         setUser(session?.user ?? null);
+        setError(null); 
       } catch (error) {
         console.log('Auth initialization failed:', error);
-        setError('Authentication service unavailable');
+        if (error instanceof Error && error.message.includes('timeout')) {
+          setError('Authentication service unavailable');
+        }
         setSession(null);
         setUser(null);
       } finally {
@@ -48,12 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // Listen for auth changes with error handling
     let subscription: any;
     try {
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        setError(null); 
         setLoading(false);
       });
       subscription = data;
@@ -72,19 +74,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.signUp({ email, password });
       
+      // Timeout específico para signup (20 segundos)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Signup timeout')), 20000)
+      );
+      
+      const signupPromise = supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      const { data, error } = await Promise.race([signupPromise, timeoutPromise]) as any;
+
       if (error) {
-        setError(error.message);
+        console.error('Sign up error:', error);
         showError(error.message);
         return false;
-      } else {
-        showSuccess('Registration successful! Please check your email for verification.');
+      }
+
+      if (data.user) {
+        showSuccess('Account created successfully! Please check your email to verify your account.');
         return true;
       }
-    } catch (error: any) {
-      setError(error.message);
-      showError(error.message);
+
+      return false;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        showError('Signup timeout - please try again');
+      } else {
+        showError('An unexpected error occurred');
+      }
       return false;
     } finally {
       setLoading(false);
@@ -95,19 +116,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
       
+      // Timeout específico para login (20 segundos)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timeout')), 20000)
+      );
+      
+      const loginPromise = supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
+
       if (error) {
-        setError(error.message);
+        console.error('Sign in error:', error);
         showError(error.message);
         return false;
-      } else {
-        showSuccess('Successfully logged in!');
+      }
+
+      if (data.user) {
+        showSuccess('Successfully signed in!');
         return true;
       }
-    } catch (error: any) {
-      setError(error.message);
-      showError(error.message);
+
+      return false;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        showError('Login timeout - please try again');
+      } else {
+        showError('An unexpected error occurred');
+      }
       return false;
     } finally {
       setLoading(false);
