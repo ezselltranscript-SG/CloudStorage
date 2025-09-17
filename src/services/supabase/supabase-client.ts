@@ -5,13 +5,15 @@ import type { Database } from '../../types/supabase.js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Crear el cliente de Supabase con configuración balanceada
+// Crear el cliente de Supabase - DESHABILITAR COMPLETAMENTE AUTH AUTOMÁTICO
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,  // Necesario para autenticación
-    persistSession: true,    // Necesario para mantener login
-    detectSessionInUrl: false,
-    flowType: 'pkce'
+    autoRefreshToken: false,    // NO refresh automático
+    persistSession: false,      // NO persistir sesiones
+    detectSessionInUrl: false,  // NO detectar en URL
+    flowType: 'pkce',
+    storage: undefined,         // NO usar localStorage para auth
+    storageKey: undefined       // NO key de storage
   },
   global: {
     fetch: (url, options = {}) => {
