@@ -23,51 +23,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 15000)
-        );
-        
-        const sessionPromise = supabase.auth.getSession();
-        
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        setError(null); 
-      } catch (error) {
-        console.log('Auth initialization failed:', error);
-        if (error instanceof Error && error.message.includes('timeout')) {
-          setError('Authentication service unavailable');
-        }
-        setSession(null);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Inicializar sin intentar obtener sesión existente
+    // Evitar getSession() que puede triggear refresh automático
+    setSession(null);
+    setUser(null);
+    setError(null);
+    setLoading(false);
 
-    initAuth();
-
-    let subscription: any;
-    try {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setError(null); 
-        setLoading(false);
-      });
-      subscription = data;
-    } catch (error) {
-      console.log('Auth listener failed:', error);
-    }
-
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+    // NO configurar onAuthStateChange listener
+    // Este listener automáticamente intenta refrescar tokens expirados
+    // causando los 503 errors infinitos
   }, []);
 
   const signUp = async (email: string, password: string): Promise<boolean> => {
@@ -94,6 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
+        // Manualmente actualizar estado si hay sesión
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.user);
+        }
         showSuccess('Account created successfully! Please check your email to verify your account.');
         return true;
       }
@@ -135,7 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      if (data.user) {
+      if (data.user && data.session) {
+        // Manualmente actualizar estado sin listener automático
+        setSession(data.session);
+        setUser(data.user);
         showSuccess('Successfully signed in!');
         return true;
       }
@@ -158,17 +131,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
+
       if (error) {
-        setError(error.message);
+        console.error('Sign out error:', error);
         showError(error.message);
         return false;
-      } else {
-        showSuccess('Successfully logged out');
-        return true;
       }
-    } catch (error: any) {
-      setError(error.message);
-      showError(error.message);
+
+      // Manualmente limpiar estado
+      setSession(null);
+      setUser(null);
+      setError(null);
+      showSuccess('Successfully signed out!');
+      return true;
+    } catch (error) {
+      console.error('Sign out error:', error);
+      showError('An unexpected error occurred');
       return false;
     } finally {
       setLoading(false);
